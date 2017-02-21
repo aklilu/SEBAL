@@ -23,8 +23,7 @@ def main():
     number = 3                                                                                     # Number defines the column of the inputExcel
     inputExcel=r'D:\Water_Accounting\SEBAL\Python\Newest SEBAL\InputEXCEL_v3_3_6.xlsx'               # The excel with all the SEBAL input data
     VegetationExcel = r'D:\Water_Accounting\SEBAL\Python\Newest SEBAL\Vegetation height model.xlsx'  # This excel defines the p and c factor and vegetation height.
-    gdalwarp=r'C:\Anaconda2\Lib\site-packages\osgeo\gdalwarp.exe'                                    # gdalwarp executable
-    output_folder = r'D:\Water_Accounting\SEBAL\Python\SEBAL_TEST_DATA\Preprocessing_Output2'         # Output folder
+    output_folder = r'D:\Water_Accounting\SEBAL\Python\SEBAL_TEST_DATA\Preprocessing_Output'         # Output folder
     LU_data_FileName=r'D:\Water_Accounting\SEBAL\Tadla_full_scene\Landcover_tadla\LU_map.tif'        # Path to Land Use map
 
 ######################## Load Excels ##########################################	
@@ -153,7 +152,7 @@ def main():
 
     # Reproject coz zenith angle    
     dst_FileName_cos = os.path.join(output_folder_temp,'resh_cos_zn.tif')
-    cos_zn_resh = reshape(gdalwarp,cos_zn_fileName, dst_FileName_cos, 30, var='cos_zn')
+    cos_zn_resh = reshape(cos_zn_fileName, dst_FileName_cos, 30, var='cos_zn')
 
 #################### Calculate NDVI and SAVI for LANDSAT ##########################################	
 
@@ -185,7 +184,7 @@ def main():
         dst_FileName = os.path.join(output_folder_temp,'cropped_LS_b2.tif')  # Before 10 !!
      							
         # Clip the landsat image to match the DEM map											
-        fullCmd = ' '.join([gdalwarp, '-te %s %s %s %s' % (ulx_dem, lry_dem,lrx_dem, uly_dem), src_FileName, dst_FileName])
+        fullCmd = ' '.join(['gdalwarp -te %s %s %s %s' % (ulx_dem, lry_dem,lrx_dem, uly_dem), src_FileName, dst_FileName])
         process = subprocess.Popen(fullCmd)
         process.wait()
    
@@ -194,7 +193,7 @@ def main():
         shape=[x_size_lsc,y_size_lsc]
  			
         # Create the corrected signals of Landsat in 1 array
-        Reflect = Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx_dem,lry_dem,lrx_dem,uly_dem,shape,gdalwarp,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr)
+        Reflect = Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx_dem,lry_dem,lrx_dem,uly_dem,shape,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr)
 
         # Calculate temporal water mask
         water_mask_temp=Water_Mask(shape,Reflect)       
@@ -246,7 +245,7 @@ def main():
         save_GeoTiff_proy(dest, LAI, LAI_FileName, shape, nband=1)	
 								
 
-        therm_data = Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape,gdalwarp)          
+        therm_data = Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape)          
         Surface_temp=Calc_surface_water_temp(Temp_inst,Landsat_nr,Lmax,Lmin,therm_data,b10_emissivity,k1_c,k2_c,eact_inst,shape,water_mask_temp,Bands_thermal,Rp,tau_sky,surf_temp_offset,Image_Type)
         therm_data_FileName = os.path.join(output_folder,'Surface_Temperature_LS_%s.tif' %Var_name)
         save_GeoTiff_proy(dest, Surface_temp, therm_data_FileName, shape, nband=1)	
@@ -418,7 +417,7 @@ def main():
         # Save the thermal VIIRS data 												
         save_GeoTiff_proy(dest, data_VIIRS, proyVIIRS_fileName, shape, nband=1)	
 
-################################################### HANDS #######################################################
+################################################### HANTS #######################################################
 
 
 
@@ -687,7 +686,7 @@ def AngleSlope(a,b,c,time):
     return(angle)    
 
 #------------------------------------------------------------------------------
-def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc, gdalwarp):          
+def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc):          
     """
     This function calculates and returns the thermal data from the landsat image.
     """                             
@@ -704,7 +703,7 @@ def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_d
         dst_FileName = os.path.join(output_folder, 'Temp',
                                     'cropped_LS_b%1d.tif' % band)
 
-        ls_data=Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc, gdalwarp) 																																	
+        ls_data=Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc) 																																	
 
         index = np.where(Bands[:] == band)[0][0] - 6
         therm_data[:, :, index] = ls_data
@@ -712,7 +711,7 @@ def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_d
     return(therm_data)
 
 #------------------------------------------------------------------------------
-def Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,gdalwarp,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr):
+def Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr):
     """
     This function calculates and returns the reflectance and spectral radiation from the landsat image.
     """ 
@@ -753,12 +752,12 @@ def Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx
     return(Reflect)
 
 #------------------------------------------------------------------------------				
-def Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,gdalwarp):
+def Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc):
     """
     This function opens a landsat image and returns the data array of a specific landsat band.
     """                           
     # crop band to the DEM extent
-    fullCmd = ' '.join([gdalwarp, '-te %s %s %s %s' % (ulx_dem, lry_dem,lrx_dem, uly_dem), src_FileName, dst_FileName])
+    fullCmd = ' '.join(['gdalwarp -te %s %s %s %s' % (ulx_dem, lry_dem,lrx_dem, uly_dem), src_FileName, dst_FileName])
     process = subprocess.Popen(fullCmd)
     process.wait()
     
@@ -1191,7 +1190,7 @@ def save_GeoTiff_geo(src_dataset, dst_dataset_array, dst_fileName, ncol, nrow,
     dst_dataset = None				
 				
 #------------------------------------------------------------------------------
-def reshape(gdalwarp,src_FileName, dst_FileName, LS_resol, var):
+def reshape(src_FileName, dst_FileName, LS_resol, var):
     """
     This function resamples the DEM related maps (lat, lon, etc.)
     to the resolution of the Landsat images (generally 30 m)
@@ -1203,7 +1202,7 @@ def reshape(gdalwarp,src_FileName, dst_FileName, LS_resol, var):
     # If the directory does not exist, make it.
     if not os.path.exists(dir_name):
         os.makedirs(dir_name)
-    fullCmd = ' '.join([gdalwarp, ' -tr %s %s ' % (LS_resol, LS_resol),src_FileName, dst_FileName])  # -r {nearest}
+    fullCmd = ' '.join(['gdalwarp -tr %s %s ' % (LS_resol, LS_resol),src_FileName, dst_FileName])  # -r {nearest}
     process = subprocess.Popen(fullCmd)
     process.wait()
     re_var = gdal.Open(dst_FileName)  # Open cropped Image
