@@ -20,11 +20,11 @@ from pyproj import Proj, transform
 def main():
 ############################## INPUT ##########################################		
     # Input for preSEBAL.py
-    number = 3                                                                                     # Number defines the column of the inputExcel
-    inputExcel=r'D:\Water_Accounting\SEBAL\Python\Newest SEBAL\InputEXCEL_v3_3_6.xlsx'               # The excel with all the SEBAL input data
-    VegetationExcel = r'D:\Water_Accounting\SEBAL\Python\Newest SEBAL\Vegetation height model.xlsx'  # This excel defines the p and c factor and vegetation height.
-    output_folder = r'D:\Water_Accounting\SEBAL\Python\SEBAL_TEST_DATA\Preprocessing_Output'         # Output folder
-    LU_data_FileName=r'D:\Water_Accounting\SEBAL\Tadla_full_scene\Landcover_tadla\LU_map.tif'        # Path to Land Use map
+for number in range(2,48):                                                                                   # Number defines the column of the inputExcel
+    inputExcel=r'J:\SEBAL_Tadla\Excel\InputEXCEL_v3_3_6.xlsx'               # The excel with all the SEBAL input data
+    VegetationExcel = r'J:\SEBAL_Tadla\Excel\Vegetation height model.xlsx'  # This excel defines the p and c factor and vegetation height.
+    output_folder = r'J:\SEBAL_Tadla\Preprocessing_Output'         # Output folder
+    LU_data_FileName=r'J:\SEBAL_Tadla\LandCover\LU_map.tif'        # Path to Land Use map
 
 ######################## Load Excels ##########################################	
     # Open Excel workbook for SEBAL inputs
@@ -45,10 +45,27 @@ def main():
     output_folder_temp = os.path.join(input_folder,'Preprocessing_output','Temp')
 
     # Create or empty output folder		
-    if os.path.isdir(output_folder):
-        shutil.rmtree(output_folder)
-    os.makedirs(output_folder)	
-			
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+								
+    NDVI_outfolder = os.path.join(output_folder,'NDVI') 				
+    SAVI_outfolder = os.path.join(output_folder,'SAVI') 
+    Albedo_outfolder = os.path.join(output_folder,'Albedo') 								
+    LAI_outfolder = os.path.join(output_folder,'LAI') 
+    Surface_Temperature_outfolder = os.path.join(output_folder,'Surface_Temperature') 
+
+    if not os.path.exists(NDVI_outfolder):
+        os.makedirs(NDVI_outfolder)
+    if not os.path.exists(SAVI_outfolder):
+        os.makedirs(SAVI_outfolder)								
+    if not os.path.exists(Albedo_outfolder):
+        os.makedirs(Albedo_outfolder)
+    if not os.path.exists(LAI_outfolder):
+        os.makedirs(LAI_outfolder)
+    if not os.path.exists(Surface_Temperature_outfolder):
+        os.makedirs(Surface_Temperature_outfolder)
+
+								
     # Extract the Path to the DEM map from the excel file
     DEM_fileName = '%s' %str(ws['E%d' % number].value) #'DEM_HydroShed_m'  
 
@@ -98,13 +115,13 @@ def main():
         Total_Time_VIIRS = Name_VIIRS_Image_TB.split('_')[4]
 				
         # Get the information out of the VIIRS name
-        year = int(Total_Day_VIIRS[0:4])
-        month = int(Total_Day_VIIRS[4:6])
-        day = int(Total_Day_VIIRS[6:8])
+        year = int(Total_Day_VIIRS[1:5])
+        month = int(Total_Day_VIIRS[5:7])
+        day = int(Total_Day_VIIRS[7:9])
         Startdate = '%d-%02d-%02d' % (year,month,day)
         DOY=datetime.datetime.strptime(Startdate,'%Y-%m-%d').timetuple().tm_yday
-        hour = int(Total_Time_VIIRS[0:2])
-        minutes = int(Total_Time_VIIRS[2:4])								
+        hour = int(Total_Time_VIIRS[1:3])
+        minutes = int(Total_Time_VIIRS[3:5])								
 
 ######################## Extract general data from DEM file and create Slope map ##########################################	
     # Variable date name
@@ -201,13 +218,13 @@ def main():
         # Calculate the NDVI and SAVI								
         NDVI,SAVI,albedo = Calc_NDVI_SAVI_albedo(Reflect)
 
-        NDVI_FileName = os.path.join(output_folder,'NDVI_LS_%s.tif'%Var_name)
+        NDVI_FileName = os.path.join(NDVI_outfolder,'NDVI_LS_%s.tif'%Var_name)
         save_GeoTiff_proy(dest, NDVI, NDVI_FileName, shape, nband=1)
 								
-        SAVI_FileName = os.path.join(output_folder,'SAVI_LS_%s.tif'%Var_name)
+        SAVI_FileName = os.path.join(SAVI_outfolder,'SAVI_LS_%s.tif'%Var_name)
         save_GeoTiff_proy(dest, SAVI, SAVI_FileName, shape, nband=1)
 								
-        albedo_FileName = os.path.join(output_folder,'Albedo_LS_%s.tif'%Var_name)
+        albedo_FileName = os.path.join(Albedo_outfolder,'Albedo_LS_%s.tif'%Var_name)
         save_GeoTiff_proy(dest, albedo, albedo_FileName, shape, nband=1)
 
 ################### Extract Meteo data for Landsat days from SEBAL Excel ##################
@@ -241,13 +258,13 @@ def main():
         eact_inst = RH_inst * esat_inst / 100
         FPAR,tir_emis,Nitrogen,vegt_cover,LAI,b10_emissivity = Calc_vegt_para(NDVI,SAVI,water_mask_temp,shape)
 
-        LAI_FileName = os.path.join(output_folder,'LAI_LS_%s.tif' %Var_name)
+        LAI_FileName = os.path.join(LAI_outfolder,'LAI_LS_%s.tif' %Var_name)
         save_GeoTiff_proy(dest, LAI, LAI_FileName, shape, nband=1)	
 								
 
         therm_data = Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape)          
         Surface_temp=Calc_surface_water_temp(Temp_inst,Landsat_nr,Lmax,Lmin,therm_data,b10_emissivity,k1_c,k2_c,eact_inst,shape,water_mask_temp,Bands_thermal,Rp,tau_sky,surf_temp_offset,Image_Type)
-        therm_data_FileName = os.path.join(output_folder,'Surface_Temperature_LS_%s.tif' %Var_name)
+        therm_data_FileName = os.path.join(Surface_Temperature_outfolder,'Surface_Temperature_LS_%s.tif' %Var_name)
         save_GeoTiff_proy(dest, Surface_temp, therm_data_FileName, shape, nband=1)	
 								
 #################### Calculate NDVI and SAVI for VIIRS-PROBAV ##########################################	
@@ -380,7 +397,7 @@ def main():
 
         # Reproject the Veg_height to the LAI projection
         # dest = reproject_dataset3(Veg_Height_proj_FileName, LAI_FileName)			
-        Albedo_FileName = os.path.join(output_folder,'Albedo_PROBAV_%s.tif' %Var_name) 
+        Albedo_FileName = os.path.join(Albedo_outfolder,'Albedo_PROBAV_%s.tif' %Var_name) 
 								
         save_GeoTiff_proy(dest, Surface_Albedo_PROBAV, Albedo_FileName, shape, nband=1)	  
 
@@ -389,15 +406,15 @@ def main():
         NDVI = np.zeros((shape[1], shape[0]))
         NDVI[n218_memory != 0] =  ( spectral_reflectance_PROBAV[:, :, 3][n218_memory != 0] - spectral_reflectance_PROBAV[:, :, 2][n218_memory != 0] )/ ( spectral_reflectance_PROBAV[:, :, 2][n218_memory != 0] + spectral_reflectance_PROBAV[:, :, 3][n218_memory != 0] )
 
-        NDVI_FileName = os.path.join(output_folder,'NDVI_PROBAV_%s.tif' %Var_name)
+        NDVI_FileName = os.path.join(NDVI_outfolder,'NDVI_PROBAV_%s.tif' %Var_name)
         save_GeoTiff_proy(dest, NDVI, NDVI_FileName, shape, nband=1)	
 
-        SAVI_FileName = os.path.join(output_folder,'SAVI_PROBAV_%s.tif' %Var_name)
+        SAVI_FileName = os.path.join(SAVI_outfolder,'SAVI_PROBAV_%s.tif' %Var_name)
         save_GeoTiff_proy(dest, SAVI, SAVI_FileName, shape, nband=1)															
 				
         # Calculate and save the LAI based on NDVI and SAVI 
         FPAR,tir_emis,Nitrogen,vegt_cover,LAI,b10_emissivity=Calc_vegt_para(NDVI,SAVI,water_mask_temp,shape)
-        LAI_FileName = os.path.join(output_folder,'LAI_PROBAV_%s.tif' %Var_name) 				
+        LAI_FileName = os.path.join(LAI_outfolder,'LAI_PROBAV_%s.tif' %Var_name) 				
         save_GeoTiff_proy(dest, LAI, LAI_FileName, shape, nband=1)	
 
 ################################## Calculate VIIRS surface temperature ########################
@@ -412,7 +429,7 @@ def main():
         data_VIIRS = VIIRS.GetRasterBand(1).ReadAsArray()    
 				
         # Define the thermal VIIRS output name
-        proyVIIRS_fileName = os.path.join(output_folder, 'Surface_Temp_VIIRS_%s.tif' %Var_name)
+        proyVIIRS_fileName = os.path.join(Surface_Temperature_outfolder, 'Surface_Temp_VIIRS_%s.tif' %Var_name)
 	 											
         # Save the thermal VIIRS data 												
         save_GeoTiff_proy(dest, data_VIIRS, proyVIIRS_fileName, shape, nband=1)	
@@ -421,6 +438,7 @@ def main():
 
 
 
+''' 	
 
 ################################## All input is now calculated, so preprosessing can start ########################
 
@@ -551,6 +569,9 @@ def main():
 ############################# delete temporary directory ########################
     shutil.rmtree(output_folder_temp)
 #################################################################################
+''' 			
+				
+				
 # Functions
 #################################################################################   
 def DEM_lat_lon(DEM_fileName,output_folder_temp):

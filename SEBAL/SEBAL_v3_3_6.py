@@ -3555,7 +3555,7 @@ def Get_Extend_Landsat(src_FileName):
 def Calc_Ra_Mountain(lon,DOY,hour,minutes,lon_proy,lat_proy,slope,aspect):    
     """
     Calculates the extraterrestiral solar radiation by using the date, slope and aspect.
-        """
+    """
     
     # Constants
     deg2rad = np.pi / 180.0  # Factor to transform from degree to rad
