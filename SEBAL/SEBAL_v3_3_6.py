@@ -235,7 +235,7 @@ def SEBALcode(number,inputExcel):
     # Define the method of radiation (1 or 2)
     Method_Radiation_24=int(ws['I%d' %number].value)     # 1=Transm_24 will be calculated Rs_24 must be given
                                                          # 2=Rs_24 will be determined Transm_24 must be given
-    print 'Method for daily radiation (1=Transm_24, 2=Rs_24) = %s' %(Method_Radiation_24) 
+    print 'Method for daily radiation (1=Rs_24, 2=Transm_24) = %s' %(Method_Radiation_24) 
 
     # if method radiation is 1
     # ---------------------------- daily Surface Solar Radiation ------------
@@ -277,7 +277,7 @@ def SEBALcode(number,inputExcel):
 
     # Define the method of instataneous radiation (1 or 2)		
     Method_Radiation_inst = int(ws['L%d' %number].value)    # 1=Transm_inst will be calculated Rs_inst must be given
-    print 'Method for instantaneous radiation (1=Transm_inst, 2=Rs_inst) = %s' %(Method_Radiation_inst)                                                           # 2=Rs_24 will be determined Transm_24 must be given
+    print 'Method for instantaneous radiation (1=Rs_inst, 2=Transm_inst) = %s' %(Method_Radiation_inst)                                                           # 2=Rs_24 will be determined Transm_24 must be given
    
     # if method instantaneous radiation is 1
     # ---------------------------- Instantaneous Surface Solar Radiation ------------
@@ -792,15 +792,21 @@ def SEBALcode(number,inputExcel):
         # If the directory does not exist, create it.
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
-											
+            
+            
+        lsc, ulx, uly, lrx, lry, epsg_to = reproject_dataset2(src_FileName, proyDEM_fileName)											
+
+       
         # Clip the landsat image to match the DEM map											
         fullCmd = ' '.join(['gdalwarp -te %s %s %s %s' % (ulx_dem, lry_dem, lrx_dem, uly_dem), src_FileName, dst_FileName])
         process = subprocess.Popen(fullCmd, shell = True)
         process.wait()
    
         #	Get the extend of the remaining landsat file	after clipping based on the DEM file	
-        lsc, band_data, ulx, uly, lrx, lry, x_size_lsc, y_size_lsc = Get_Extend_Landsat(dst_FileName)
+        y_size_lsc = lsc.RasterYSize
+        x_size_lsc = lsc.RasterXSize    
         shape_lsc = [x_size_lsc, y_size_lsc]
+        
         print '--- '
         print 'Cropped LANDSAT Image - '
         print '  Size :', x_size_lsc, y_size_lsc
@@ -836,104 +842,161 @@ def SEBALcode(number,inputExcel):
       
         # 6a) Instantaneous Temperature
         if Temp_inst_kind_of_data is 1:
-            Temp_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Temp_inst_input.tif')
-            Temp_inst = Reshape_Reproject_Input_data(Temp_inst_name, Temp_inst_fileName, proyDEM_fileName)
- 
+            try:
+                Temp_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Temp_inst_input.tif')
+                Temp_inst = Reshape_Reproject_Input_data(Temp_inst_name, Temp_inst_fileName, proyDEM_fileName)
+            except:
+                print 'ERROR: Check the instantenious Temperature input path in the meteo excel tab' 
+                
         # 6b) Daily Temperature         
         if Temp_24_kind_of_data is 1:
-            Temp_24_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Temp_24_input.tif')
-            Temp_24 = Reshape_Reproject_Input_data(Temp_24_name, Temp_24_fileName, proyDEM_fileName)
-       
+            try:
+                Temp_24_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Temp_24_input.tif')
+                Temp_24 = Reshape_Reproject_Input_data(Temp_24_name, Temp_24_fileName, proyDEM_fileName)
+            except:
+                print 'ERROR: Check the daily Temperature input path in the meteo excel tab' 
+                
         # 6c) Daily Relative Humidity       
         if RH_24_kind_of_data is 1:
-            RH_24_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'RH_24_input.tif')
-            RH_24 = Reshape_Reproject_Input_data(RH_24_name, RH_24_fileName, proyDEM_fileName)
+            try:
+                RH_24_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'RH_24_input.tif')
+                RH_24 = Reshape_Reproject_Input_data(RH_24_name, RH_24_fileName, proyDEM_fileName)
+            except:
+                print 'ERROR: Check the instantenious Relative Humidity input path in the meteo excel tab' 
  
         # 6d) Instantaneous Relative Humidity      
         if RH_inst_kind_of_data is 1:
-            RH_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'RH_inst_input.tif')
-            RH_inst = Reshape_Reproject_Input_data(RH_inst_name, RH_inst_fileName, proyDEM_fileName)  
+            try:
+                RH_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'RH_inst_input.tif')
+                RH_inst = Reshape_Reproject_Input_data(RH_inst_name, RH_inst_fileName, proyDEM_fileName)  
+            except:
+                print 'ERROR: Check the daily Relative Humidity input path in the meteo excel tab' 
  
         # 6e) Daily wind speed      
         if Wind_24_kind_of_data is 1:
-            Wind_24_fileName = os.path.join(output_folder, 'Output_radiation_balance','Wind_24_input.tif')
-            Wind_24 = Reshape_Reproject_Input_data(Wind_24_name, Wind_24_fileName, proyDEM_fileName)
-            Wind_24[Wind_24 < 1.5] = 1.5
- 
+            try:
+                Wind_24_fileName = os.path.join(output_folder, 'Output_radiation_balance','Wind_24_input.tif')
+                Wind_24 = Reshape_Reproject_Input_data(Wind_24_name, Wind_24_fileName, proyDEM_fileName)
+                Wind_24[Wind_24 < 1.5] = 1.5
+            except:
+                print 'ERROR: Check the daily wind input path in the meteo excel tab' 
+  
         # 6f) Instantaneous wind speed              
         if Wind_inst_kind_of_data is 1:
-            Wind_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Wind_inst_input.tif')
-            Wind_inst = Reshape_Reproject_Input_data(Wind_inst_name, Wind_inst_fileName, proyDEM_fileName)  
-            Wind_inst[Wind_inst < 1.5] = 1.5
-  
+            try:
+                Wind_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Wind_inst_input.tif')
+                Wind_inst = Reshape_Reproject_Input_data(Wind_inst_name, Wind_inst_fileName, proyDEM_fileName)  
+                Wind_inst[Wind_inst < 1.5] = 1.5
+            except:
+                print 'ERROR: Check the instantenious wind input path in the meteo excel tab' 
+
         # 6g) Daily incoming Radiation      
         if Method_Radiation_24 == 1:    
             if Rs_24_kind_of_data is 1:
-                Net_radiation_daily_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Ra_24_input.tif')
-                Rs_24 = Reshape_Reproject_Input_data(Rs_24_name, Net_radiation_daily_fileName, proyDEM_fileName)
+                try:
+                    Net_radiation_daily_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Ra_24_input.tif')
+                    Rs_24 = Reshape_Reproject_Input_data(Rs_24_name, Net_radiation_daily_fileName, proyDEM_fileName)
+                except:
+                    print 'ERROR: Check the daily net radiation input path in the meteo excel tab' 
  
         # 6h) Instantaneous incoming Radiation    
         if Method_Radiation_inst == 1:            
             if Rs_in_inst_kind_of_data is 1:
-                Net_radiation_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Ra_in_inst_input.tif')
-                Rs_in_inst = Reshape_Reproject_Input_data(Rs_in_inst_name, Net_radiation_inst_fileName, proyDEM_fileName)
+                try:
+                    Net_radiation_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Ra_in_inst_input.tif')
+                    Rs_in_inst = Reshape_Reproject_Input_data(Rs_in_inst_name, Net_radiation_inst_fileName, proyDEM_fileName)
+                except:
+                    print 'ERROR: Check the instanenious net radiation input path in the meteo excel tab' 
  
         # 6i) Daily Transmissivity
         if Method_Radiation_24 == 2:      
             if Transm_24_kind_of_data is 1:
-                Transm_24_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Transm_24_input.tif')
-                Transm_24 = Reshape_Reproject_Input_data(Transm_24_name, Transm_24_fileName, proyDEM_fileName)
+                try:
+                    Transm_24_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Transm_24_input.tif')
+                    Transm_24 = Reshape_Reproject_Input_data(Transm_24_name, Transm_24_fileName, proyDEM_fileName)
+                except:
+                    print 'ERROR: Check the daily transmissivity input path in the meteo excel tab' 
  
         # 6j) Instantaneous Transmissivity
         if Method_Radiation_inst == 2:     
             if Transm_inst_kind_of_data is 1:
-                Transm_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Transm_inst_input.tif')
-                Transm_inst = Reshape_Reproject_Input_data(Transm_inst_name, Transm_inst_fileName, proyDEM_fileName)
+                try:
+                    Transm_inst_fileName = os.path.join(output_folder, 'Output_radiation_balance', 'Transm_inst_input.tif')
+                    Transm_inst = Reshape_Reproject_Input_data(Transm_inst_name, Transm_inst_fileName, proyDEM_fileName)
+                except:
+                    print 'ERROR: Check the instantenious transmissivity input path in the meteo excel tab' 
  
         # 6k) Theta saturated topsoil    
         if Theta_sat_top_kind_of_data is 1:
-            Theta_sat_top_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_sat_top_input.tif')
-            Theta_sat_top = Reshape_Reproject_Input_data(Theta_sat_top_name, Theta_sat_top_fileName, proyDEM_fileName)
- 
+            try:
+               Theta_sat_top_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_sat_top_input.tif')
+               Theta_sat_top = Reshape_Reproject_Input_data(Theta_sat_top_name, Theta_sat_top_fileName, proyDEM_fileName)
+            except:
+               print 'ERROR: Check the saturated top soil input path in the soil excel tab' 
+
         # 6l) Theta saturated subsoil          
         if Theta_sat_sub_kind_of_data is 1:
-            Theta_sat_sub_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_sat_sub_input.tif')
-            Theta_sat_sub  =Reshape_Reproject_Input_data(Theta_sat_sub_name,Theta_sat_sub_fileName,proyDEM_fileName)
- 
+            try:
+                Theta_sat_sub_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_sat_sub_input.tif')
+                Theta_sat_sub  =Reshape_Reproject_Input_data(Theta_sat_sub_name,Theta_sat_sub_fileName,proyDEM_fileName)
+            except:
+                print 'ERROR: Check the saturated sub soil input path in the soil excel tab' 
+                
         # 6m) Theta residual topsoil        
         if Theta_res_top_kind_of_data is 1:
-            Theta_res_top_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_res_top_input.tif')
-            Theta_res_top=Reshape_Reproject_Input_data(Theta_res_top_name,Theta_res_top_fileName,proyDEM_fileName)
- 
+            try:    
+                Theta_res_top_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_res_top_input.tif')
+                Theta_res_top=Reshape_Reproject_Input_data(Theta_res_top_name,Theta_res_top_fileName,proyDEM_fileName)
+            except:
+                print 'ERROR: Check the residual top soil input path in the soil excel tab' 
+
         # 6n) Theta residual subsoil    
         if Theta_res_sub_kind_of_data is 1:
-            Theta_res_sub_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_res_sub_input.tif')
-            Theta_res_sub=Reshape_Reproject_Input_data(Theta_res_sub_name,Theta_res_sub_fileName,proyDEM_fileName)
- 
+           try:
+               Theta_res_sub_fileName = os.path.join(output_folder, 'Output_soil_moisture','Theta_res_sub_input.tif')
+               Theta_res_sub=Reshape_Reproject_Input_data(Theta_res_sub_name,Theta_res_sub_fileName,proyDEM_fileName)
+           except:
+                print 'ERROR: Check the residual sub soil input path in the soil excel tab' 
+                
         # 6o) Wilting point    
         if Soil_moisture_wilting_point_kind_of_data is 1:
-            Soil_moisture_wilting_point_fileName = os.path.join(output_folder, 'Output_soil_moisture','Soil_moisture_wilting_point_input.tif')
-            Soil_moisture_wilting_point=Reshape_Reproject_Input_data(Soil_moisture_wilting_point_name,Soil_moisture_wilting_point_fileName,proyDEM_fileName)
-  
+            try:
+                Soil_moisture_wilting_point_fileName = os.path.join(output_folder, 'Output_soil_moisture','Soil_moisture_wilting_point_input.tif')
+                Soil_moisture_wilting_point=Reshape_Reproject_Input_data(Soil_moisture_wilting_point_name,Soil_moisture_wilting_point_fileName,proyDEM_fileName)
+            except:
+                print 'ERROR: Check the wilting point input path in the soil excel tab' 
+
         # 6p) Fraction field capacity        
         if Field_Capacity_kind_of_data is 1:
-            Field_Capacity_fileName = os.path.join(output_folder, 'Output_soil_moisture','Fraction_Field_Capacity_and_Saturation_input.tif')
-            Field_Capacity=Reshape_Reproject_Input_data(Field_Capacity_name,Field_Capacity_fileName,proyDEM_fileName)
- 
+            try:
+                Field_Capacity_fileName = os.path.join(output_folder, 'Output_soil_moisture','Fraction_Field_Capacity_and_Saturation_input.tif')
+                Field_Capacity=Reshape_Reproject_Input_data(Field_Capacity_name,Field_Capacity_fileName,proyDEM_fileName)
+            except:
+                print 'ERROR: Check the field capacity input path in the soil excel tab' 
+
         # 6q) Light Use Efficiency        
         if LUEmax_kind_of_data is 1:
-            LUEmax_fileName = os.path.join(output_folder, 'Output_soil_moisture','LUEmax_input.tif')
-            LUEmax=Reshape_Reproject_Input_data(LUEmax_name,LUEmax_fileName,proyDEM_fileName)
- 
+            try:
+                LUEmax_fileName = os.path.join(output_folder, 'Output_soil_moisture','LUEmax_input.tif')
+                LUEmax=Reshape_Reproject_Input_data(LUEmax_name,LUEmax_fileName,proyDEM_fileName)
+            except:
+                print 'ERROR: Check the LUE input path in the soil excel tab' 
+
         # 6r) Obstacle height      						
         if h_obst_kind_of_data is 1:
-            h_obst_fileName = os.path.join(output_folder, 'Output_soil_moisture','h_obst_input.tif')
-            h_obst=Reshape_Reproject_Input_data(h_obst_name,h_obst_fileName,proyDEM_fileName)
+            try:
+                h_obst_fileName = os.path.join(output_folder, 'Output_soil_moisture','h_obst_input.tif')
+                h_obst=Reshape_Reproject_Input_data(h_obst_name,h_obst_fileName,proyDEM_fileName)
+            except:
+                print 'ERROR: Check the obstacle height input path in the soil excel tab' 
  
         # 6s) deplection factor      						
         if depl_factor_kind_of_data is 1:
-            depl_factor_fileName = os.path.join(output_folder, 'Output_soil_moisture','depl_factor_input.tif')
-            depl_factor=Reshape_Reproject_Input_data(depl_factor_name,depl_factor_fileName,proyDEM_fileName)
+            try:
+                depl_factor_fileName = os.path.join(output_folder, 'Output_soil_moisture','depl_factor_input.tif')
+                depl_factor=Reshape_Reproject_Input_data(depl_factor_name,depl_factor_fileName,proyDEM_fileName)
+            except:
+                print 'ERROR: Check the depletion factor input path in the soil excel tab' 
 	 						
         # Collect the landsat Thermal and Spectral data
         # 1. Create mask for the landsat images
@@ -2489,7 +2552,7 @@ def SEBALcode(number,inputExcel):
         lw_in_inst = atmos_emis * SB_const * np.power(Temp_inst + 273.15, 4) 
         print 'Instantaneous longwave incoming radiation = %0.3f (W/m2)' % np.nanmean(lw_in_inst)  
         print 'Atmospheric emissivity = %0.3f' % np.nanmean(atmos_emis) 
-        # ------------------------------------------------------------------------
+        # vv------------------------------------------------------------------------
         # ------------------------------------------------------------------------
         # ----   MODULE 5  - Meteo
    
@@ -3699,7 +3762,6 @@ def IntegrateSlope(constant,sunrise,sunset,delta,s,gamma,phi):
             - np.cos(delta)*np.sin(s)*np.sin(gamma)*(np.cos(sunset)-np.cos(sunrise)))
     return(integral)     
 
-
 #------------------------------------------------------------------------------    
 def TwoPeriods(delta,s,phi):
     '''
@@ -3898,15 +3960,24 @@ def reproject_dataset(dataset, pixel_spacing, UTM_Zone):
     4. Calculate the number of pixels with the new projection & spacing
     5. Create an in-memory raster dataset
     6. Perform the projection
-    
     """
 
     # 1) Open the dataset
     g = gdal.Open(dataset)
     if g is None:
         print 'input folder does not exist'
-   
-    # Get the Geotransform vector:
+
+     # Define the EPSG code...
+    EPSG_code = '326%02d' % UTM_Zone
+    epsg_to = int(EPSG_code)
+
+    # 2) Define the UK OSNG, see <http://spatialreference.org/ref/epsg/27700/>
+    try:
+        proj = g.GetProjection()
+        Proj_in=proj.split('EPSG","')
+        epsg_from=int((str(Proj_in[-1]).split(']')[0])[0:-1])		  
+    except:
+        epsg_from = int(4326)    # Get the Geotransform vector:
     geo_t = g.GetGeoTransform()
     # Vector components:
     # 0- The Upper Left easting coordinate (i.e., horizontal)
@@ -3918,42 +3989,26 @@ def reproject_dataset(dataset, pixel_spacing, UTM_Zone):
     x_size = g.RasterXSize  # Raster xsize
     y_size = g.RasterYSize  # Raster ysize
 
-    # Define the EPSG code...
-    EPSG_code = '326%02d' % UTM_Zone
-    epsg_to = int(EPSG_code)
+    epsg_to = int(epsg_to)
 
     # 2) Define the UK OSNG, see <http://spatialreference.org/ref/epsg/27700/>
-    try:
-        proj = g.GetProjection()
-        Proj_in=proj.split('EPSG","')
-        epsg_from=int((str(Proj_in[-1]).split(']')[0])[0:-1])		  
-    except:
-        epsg_from = int(4326)
-								
     osng = osr.SpatialReference()
     osng.ImportFromEPSG(epsg_to)
     wgs84 = osr.SpatialReference()
     wgs84.ImportFromEPSG(epsg_from)
 
-    # Up to here, all  the projection have been defined, as well as a
-    # transformation from the from to the to
-
     inProj = Proj(init='epsg:%d' %epsg_from)
     outProj = Proj(init='epsg:%d' %epsg_to)
-	
+				
     # Up to here, all  the projection have been defined, as well as a
     # transformation from the from to the to
+    ulx, uly = transform(inProj,outProj,geo_t[0], geo_t[3])
+    lrx, lry = transform(inProj,outProj,geo_t[0] + geo_t[1] * x_size,
+                                        geo_t[3] + geo_t[5] * y_size)
 
-    # 3) Work out the boundaries of the new dataset in the target projection
-    #   Skip some rows and columns in the border to avoid null values due to
-    #   reprojection - rectangle to parallelogram
-    nrow_skip = round((0.1*y_size)/2)
-    ncol_skip = round((0.1*x_size)/2)
-
-    ulx, uly = transform(inProj,outProj, geo_t[0]+ncol_skip*geo_t[1], geo_t[3] +
-                       nrow_skip * geo_t[5])
-    lrx, lry = transform(inProj,outProj, geo_t[0] + geo_t[1] * (x_size-ncol_skip),
-                       geo_t[3] + geo_t[5] * (y_size-nrow_skip))
+    # See how using 27700 and WGS84 introduces a z-value!
+    # Now, we create an in-memory raster
+    mem_drv = gdal.GetDriverByName('MEM')
 
     # The size of the raster is given the new projection and pixel spacing
     # Using the values we calculated above. Also, setting it to store one band
@@ -3961,50 +4016,38 @@ def reproject_dataset(dataset, pixel_spacing, UTM_Zone):
     col = int((lrx - ulx)/pixel_spacing)
     rows = int((uly - lry)/pixel_spacing)
 
-    out_folder_temp = os.sep.join(dataset.split(os.sep)[:-1])
-				 
-    dataset_out_file = os.path.join(out_folder_temp, 'Temp_reprojection2.tif')   
-
-
     # Re-define lr coordinates based on whole number or rows and columns
-    (ulx, uly) = (int(ulx), int(uly))
-    (lrx, lry) = (int(ulx) + col * pixel_spacing, int(uly) -
+    (lrx, lry) = (ulx + col * pixel_spacing, uly -
                   rows * pixel_spacing)
-
+																		
+    dest = mem_drv.Create('', col, rows, 1, gdal.GDT_Float32)
+    if dest is None:
+        print 'input folder to large for memory, clip input map'
      
-    # Perform the projection/resampling
-    fullCmd = "gdalwarp -overwrite -s_srs EPSG:%s -t_srs EPSG:%s -ts %s %s -te %s %s %s %s -r bilinear %s %s" %(epsg_from, epsg_to, col, rows, ulx, lry, lrx, uly, dataset, dataset_out_file)
-    process = subprocess.Popen(fullCmd, shell = True)
-    process.wait()
-				
-    dest = gdal.Open(dataset_out_file)    	
-							
-    return dest, ulx, lry, lrx, uly, epsg_to
-
-#------------------------------------------------------------------------------
-def reproject_dataset2(dataset_in, dataset_example):
-    """
-    A sample function to reproject and resample a GDAL dataset from within
-    Python. The idea here is to reproject from one system to another, as well
-    as to change the pixel size. The procedure is slightly long-winded, but
-    goes like this:
-
-    1. Set up the two Spatial Reference systems.
-    2. Open the original dataset, and get the geotransform
-    3. Calculate bounds of new geotransform by projecting the UL corners
-    4. Calculate the number of pixels with the new projection & spacing
-    5. Create an in-memory raster dataset
-    6. Perform the projection
-
-    """
-    # 
-
-    # open example dataset    try:
-    g_ex = gdal.Open(dataset_example)
-    proj = g_ex.GetProjection()
-    Proj=proj.split('EPSG","')
-    epsg_to=int((str(Proj[-1]).split(']')[0])[0:-1])		
+   # Calculate the new geotransform
+    new_geo = (ulx, pixel_spacing, geo_t[2], uly,
+               geo_t[4], - pixel_spacing)
     
+    # Set the geotransform
+    dest.SetGeoTransform(new_geo)
+    dest.SetProjection(osng.ExportToWkt())
+      
+    # Perform the projection/resampling
+    gdal.ReprojectImage(g, dest, wgs84.ExportToWkt(), osng.ExportToWkt(),gdal.GRA_Bilinear)						
+
+    return dest, ulx, lry, lrx, uly, epsg_to
+#------------------------------------------------------------------------------
+def reproject_dataset2(dataset, dataset_example):
+   
+    # open example dataset 
+    g_ex = gdal.Open(dataset_example)
+    try:
+        proj = g_ex.GetProjection()
+        Proj=proj.split('EPSG","')
+        epsg_to=int((str(Proj[-1]).split(']')[0])[0:-1])		
+    except:
+        epsg_to = int(4326)       
+      
     Y_raster_size = g_ex.RasterYSize				
     X_raster_size = g_ex.RasterXSize
 				
@@ -4013,31 +4056,31 @@ def reproject_dataset2(dataset_in, dataset_example):
     uly = Geo[3]
     lrx = ulx + X_raster_size * Geo[1]				
     lry = uly + Y_raster_size * Geo[5]	
-				
-				
-    out_folder_temp = os.sep.join(dataset_example.split(os.sep)[:-2])
-				
-    dataset_out_folder = os.path.join(out_folder_temp, 'Output_temporary')   
+ 
+    # open dataset that must be transformed    
+    g_in = gdal.Open(dataset)
+    try:
+        proj = g_in.GetProjection()
+        Proj=proj.split('EPSG","')
+        epsg_from=int((str(Proj[-1]).split(']')[0])[0:-1])		   
+    except:
+        epsg_from = int(4326)
 
-    if not os.path.exists(dataset_out_folder):
-        os.makedirs(dataset_out_folder)
-			
-    dataset_out = os.path.join(dataset_out_folder, 'Temp_reprojection.tif')   
-   			
-     # open dataset that must be transformed    
-    g_in = gdal.Open(dataset_in)
-    proj = g_in.GetProjection()
-    Proj=proj.split('EPSG","')
-    epsg_from=int((str(Proj[-1]).split(']')[0])[0:-1])		   
+    # Set the EPSG codes
+    osng = osr.SpatialReference()
+    osng.ImportFromEPSG(epsg_to)
+    wgs84 = osr.SpatialReference()
+    wgs84.ImportFromEPSG(epsg_from)
 
+    # Create new raster			
+    mem_drv = gdal.GetDriverByName('MEM')
+    dest1 = mem_drv.Create('', X_raster_size, Y_raster_size, 1, gdal.GDT_Float32)
+    dest1.SetGeoTransform(Geo)
+    dest1.SetProjection(osng.ExportToWkt())
+    
     # Perform the projection/resampling
-    fullCmd = "gdalwarp -overwrite -s_srs EPSG:%s -t_srs EPSG:%s -ts %s %s -te %s %s %s %s %s %s" %(epsg_from, epsg_to, X_raster_size, Y_raster_size, ulx, lry, lrx, uly, dataset_in, dataset_out)
-    process = subprocess.Popen(fullCmd, shell = True)
-    process.wait()
-				
-    dest = gdal.Open(dataset_out)    				
-				
-    return dest, ulx, lry, lrx, uly, epsg_to
+    gdal.ReprojectImage(g_in, dest1, wgs84.ExportToWkt(), osng.ExportToWkt(), gdal.GRA_NearestNeighbour)
+    return(dest1, ulx, lry, lrx, uly, epsg_to)			
 
 #------------------------------------------------------------------------------
 def save_GeoTiff_geo(src_dataset, dst_dataset_array, dst_fileName, ncol, nrow,
@@ -4075,10 +4118,11 @@ def save_GeoTiff_proy(src_dataset, dst_dataset_array, dst_fileName, shape_lsc,nb
     from the source dataset, in projected coordinates
 
     """
-				
+    dst_dataset_array	= np.float_(dst_dataset_array)		
     dst_dataset_array[dst_dataset_array<-9999] = np.nan					
     geotransform = src_dataset.GetGeoTransform()
     spatialreference = src_dataset.GetProjection()
+    
     # create dataset for output
     fmt = 'GTiff'
     driver = gdal.GetDriverByName(fmt)

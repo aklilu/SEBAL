@@ -18,421 +18,439 @@ import datetime
 from pyproj import Proj, transform
 
 def main():
-############################## INPUT ##########################################		
-    # Input for preSEBAL.py
-for number in range(2,48):                                                                                   # Number defines the column of the inputExcel
-    inputExcel=r'J:\SEBAL_Tadla\Excel\InputEXCEL_v3_3_6.xlsx'               # The excel with all the SEBAL input data
-    VegetationExcel = r'J:\SEBAL_Tadla\Excel\Vegetation height model.xlsx'  # This excel defines the p and c factor and vegetation height.
-    output_folder = r'J:\SEBAL_Tadla\Preprocessing_Output'         # Output folder
-    LU_data_FileName=r'J:\SEBAL_Tadla\LandCover\LU_map.tif'        # Path to Land Use map
-
-######################## Load Excels ##########################################	
-    # Open Excel workbook for SEBAL inputs
-    wb = load_workbook(inputExcel)
+    ############################## INPUT ##########################################		
+        # Input for preSEBAL.py
+    for number in range(2,3):                                                                                   # Number defines the column of the inputExcel
+        inputExcel=r'J:\SEBAL_Tadla\Excel\InputEXCEL_v3_3_6.xlsx'               # The excel with all the SEBAL input data
+        VegetationExcel = r'J:\SEBAL_Tadla\Excel\Vegetation height model.xlsx'  # This excel defines the p and c factor and vegetation height.
+        output_folder = r'J:\SEBAL_Tadla\Preprocessing_Output'         # Output folder
+        LU_data_FileName=r'J:\SEBAL_Tadla\LandCover\LU_map.tif'        # Path to Land Use map
+    
+        # optional paramater 
+        DSSF_Folder=r'J:\SEBAL_Tadla\LANDSAF'
+    
+    ######################## Load Excels ##########################################	
+        # Open Excel workbook for SEBAL inputs
+        wb = load_workbook(inputExcel)
 				
-    # Open Excel workbook used for Vegetation c and p factor conversions				
-    wb_veg = load_workbook(VegetationExcel, data_only=True)			
+        # Open Excel workbook used for Vegetation c and p factor conversions				
+        wb_veg = load_workbook(VegetationExcel, data_only=True)			
 
-######################## Open General info from SEBAL Excel ################### 
+    ######################## Open General info from SEBAL Excel ################### 
 
-    # Open the General_Input sheet			
-    ws = wb['General_Input']
-			
-    # Extract the input and output folder, and Image type from the excel file			
-    input_folder = str(ws['B%d' % number].value)                             
-    Image_Type = int(ws['D%d' % number].value)                               # Type of Image (1=Landsat & 2 = VIIRS & GLOBA-V)     
-    output_folder = os.path.join(input_folder,'Preprocessing_output')
-    output_folder_temp = os.path.join(input_folder,'Preprocessing_output','Temp')
-
-    # Create or empty output folder		
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-								
-    NDVI_outfolder = os.path.join(output_folder,'NDVI') 				
-    SAVI_outfolder = os.path.join(output_folder,'SAVI') 
-    Albedo_outfolder = os.path.join(output_folder,'Albedo') 								
-    LAI_outfolder = os.path.join(output_folder,'LAI') 
-    Surface_Temperature_outfolder = os.path.join(output_folder,'Surface_Temperature') 
-
-    if not os.path.exists(NDVI_outfolder):
-        os.makedirs(NDVI_outfolder)
-    if not os.path.exists(SAVI_outfolder):
-        os.makedirs(SAVI_outfolder)								
-    if not os.path.exists(Albedo_outfolder):
-        os.makedirs(Albedo_outfolder)
-    if not os.path.exists(LAI_outfolder):
-        os.makedirs(LAI_outfolder)
-    if not os.path.exists(Surface_Temperature_outfolder):
-        os.makedirs(Surface_Temperature_outfolder)
-
-								
-    # Extract the Path to the DEM map from the excel file
-    DEM_fileName = '%s' %str(ws['E%d' % number].value) #'DEM_HydroShed_m'  
-
-######################## Extract general data for Landsat ##########################################	
-    if Image_Type == 1:	
-       
-        # Open the Landsat_Input sheet				
-        ws = wb['Landsat_Input']		
-      
-        # Extract Landsat name, number and amount of thermal bands from excel file 
-        Name_Landsat_Image = str(ws['B%d' % number].value)    # From glovis.usgs.gov
-        Landsat_nr = int(ws['C%d' % number].value)            # Type of Landsat (LS) image used (LS5, LS7, or LS8)
-        Bands_thermal = int(ws['D%d' %number].value)         # Number of LS bands to use to retrieve land surface 
- 
-        # Pixel size of the model
-        pixel_spacing=int(30) 
-
-        # the path to the MTL file of landsat				
-        Landsat_meta_fileName = os.path.join(input_folder, '%s_MTL.txt' % Name_Landsat_Image)
-
-        # read out the general info out of the MTL file
-        year, DOY, hour, minutes, UTM_Zone, Sun_elevation = info_general_metadata(Landsat_meta_fileName) # call definition info_general_metadata
-        date=datetime.datetime.strptime('%s %s'%(year,DOY), '%Y %j')
-        month = date.month
-        day = date.day
-######################## Extract general data for VIIRS-PROBAV ##########################################	
-
-    if Image_Type == 2:	
-
-        # Open the VIIRS_PROBAV_Input sheet					
-        ws = wb['VIIRS_PROBAV_Input']
+        # Open the General_Input sheet			
+        ws = wb['General_Input']
     
-        # Extract the name of the thermal and quality VIIRS image from the excel file	
-        Name_VIIRS_Image_TB = '%s' %str(ws['B%d' % number].value)
-      					
-        # Extract the name to the PROBA-V image from the excel file	
-        Name_PROBAV_Image = '%s' %str(ws['D%d' % number].value)    # Must be a tiff file 
-             
-        # Pixel size of the model
-        pixel_spacing=int(100) 	
- 		
-        # UTM Zone of the end results					
-        UTM_Zone = float(ws['G%d' % number].value)
+        # Extract the input and output folder, and Image type from the excel file			
+        input_folder = str(ws['B%d' % number].value)                             
+        Image_Type = int(ws['D%d' % number].value)                               # Type of Image (1=Landsat & 2 = VIIRS & GLOBA-V)     
+        output_folder = os.path.join(input_folder,'Preprocessing_output')
+        output_folder_temp = os.path.join(input_folder,'Preprocessing_output','Temp')
 
-        #Get time from the VIIRS dataset name (IMPORTANT TO KEEP THE TEMPLATE OF THE VIIRS NAME CORRECT example: npp_viirs_i05_20150701_124752_wgs84_fit.tif)
-        Total_Day_VIIRS = Name_VIIRS_Image_TB.split('_')[3]
-        Total_Time_VIIRS = Name_VIIRS_Image_TB.split('_')[4]
-				
-        # Get the information out of the VIIRS name
-        year = int(Total_Day_VIIRS[1:5])
-        month = int(Total_Day_VIIRS[5:7])
-        day = int(Total_Day_VIIRS[7:9])
-        Startdate = '%d-%02d-%02d' % (year,month,day)
-        DOY=datetime.datetime.strptime(Startdate,'%Y-%m-%d').timetuple().tm_yday
-        hour = int(Total_Time_VIIRS[1:3])
-        minutes = int(Total_Time_VIIRS[3:5])								
-
-######################## Extract general data from DEM file and create Slope map ##########################################	
-    # Variable date name
-    Var_name = '%d%02d%02d' %(year, month, day)
+        # Create or empty output folder		
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
 								
-    # Open DEM and create Latitude and longitude files
-    lat,lon,lat_fileName,lon_fileName=DEM_lat_lon(DEM_fileName,output_folder_temp)
-    
-    # Reproject from Geog Coord Syst to UTM -
-    # 1) DEM - Original DEM coordinates is Geographic: lat, lon
-    dest, ulx_dem, lry_dem, lrx_dem, uly_dem, epsg_to = reproject_dataset(
-                   DEM_fileName, pixel_spacing, UTM_Zone=UTM_Zone)
-    band = dest.GetRasterBand(1)   # Get the reprojected dem band
-    ncol = dest.RasterXSize        # Get the reprojected dem column size
-    nrow = dest.RasterYSize        # Get the reprojected dem row size
-    shape=[ncol, nrow]
-       
-    # Read out the DEM band and print the DEM properties
-    data_DEM = band.ReadAsArray(0, 0, ncol, nrow)
-
-    # 2) Latitude file - reprojection    
-    # reproject latitude to the landsat projection and save as tiff file																																
-    lat_rep, ulx_dem, lry_dem, lrx_dem, uly_dem, epsg_to = reproject_dataset(
-                    lat_fileName, pixel_spacing,  UTM_Zone=UTM_Zone)
- 
-    # Get the reprojected latitude data															
-    lat_proy = lat_rep.GetRasterBand(1).ReadAsArray(0, 0, ncol, nrow)
-     
-    # 3) Longitude file - reprojection
-    # reproject longitude to the landsat projection	 and save as tiff file	
-    lon_rep, ulx_dem, lry_dem, lrx_dem, uly_dem, epsg_to = reproject_dataset(lon_fileName, pixel_spacing, UTM_Zone=UTM_Zone)
-
-    # Get the reprojected longitude data	
-    lon_proy = lon_rep.GetRasterBand(1).ReadAsArray(0, 0, ncol, nrow)
-    lon_fileName = os.path.join(output_folder_temp,'lon_resh.tif')
-    save_GeoTiff_proy(dest, lon_proy, lon_fileName, shape, nband=1)	
-				
-    # Calculate slope and aspect from the reprojected DEM
-    deg2rad,rad2deg,slope,aspect=Calc_Gradient(data_DEM,pixel_spacing)
-
-    # calculate the coz zenith angle
-    dr,coz_zn = Calc_Ra_Mountain(lon,DOY,hour,minutes,lon_proy,lat_proy,slope,aspect) 
-    cos_zn_fileName = os.path.join(output_folder_temp,'coz_zn.tif')
-    save_GeoTiff_proy(dest, coz_zn, cos_zn_fileName, shape, nband=1)			
-
-    # Reproject coz zenith angle    
-    dst_FileName_cos = os.path.join(output_folder_temp,'resh_cos_zn.tif')
-    cos_zn_resh = reshape(cos_zn_fileName, dst_FileName_cos, 30, var='cos_zn')
-
-#################### Calculate NDVI and SAVI for LANDSAT ##########################################	
-
-    if Image_Type == 1:	
-
-        # Define bands used for each Landsat number
-        if Landsat_nr == 5 or Landsat_nr == 7:
-            Bands = np.array([1, 2, 3, 4, 5, 7, 6])
-        elif Landsat_nr == 8:
-            Bands = np.array([2, 3, 4, 5, 6, 7, 10, 11])  
-        else:
-            print 'Landsat image not supported, use Landsat 7 or 8'
-
-        # Open MTL landsat and get the correction parameters   
-        Landsat_meta_fileName = os.path.join(input_folder, '%s_MTL.txt' % Name_Landsat_Image)
-        Lmin, Lmax, k1_c, k2_c = info_band_metadata(Landsat_meta_fileName, Bands)
-           
-        # Mean solar exo-atmospheric irradiance for each band (W/m2/microm)
-        # for the different Landsat images (L5, L7, or L8)
-        ESUN_L5 = np.array([1983, 1796, 1536, 1031, 220, 83.44])
-        ESUN_L7 = np.array([1997, 1812, 1533, 1039, 230.8, 84.9])
-        ESUN_L8 = np.array([1973.28, 1842.68, 1565.17, 963.69, 245, 82.106])
-    
-        # Open one band - To get the metadata of the landsat images only once (to get the extend)
-        src_FileName = os.path.join(input_folder, '%s_B2.TIF' % Name_Landsat_Image)  # before 10!
-        ls,band_data,ulx,uly,lrx,lry,x_size_ls,y_size_ls = Get_Extend_Landsat(src_FileName)
-         
-        # Crop the Landsat images to the DEM extent -
-        dst_FileName = os.path.join(output_folder_temp,'cropped_LS_b2.tif')  # Before 10 !!
-     							
-        # Clip the landsat image to match the DEM map											
-        fullCmd = ' '.join(['gdalwarp -te %s %s %s %s' % (ulx_dem, lry_dem,lrx_dem, uly_dem), src_FileName, dst_FileName])
-        process = subprocess.Popen(fullCmd)
-        process.wait()
-   
-        # Get the extend of the remaining landsat file	after clipping based on the DEM file	
-        lsc,band_data,ulx,uly,lrx,lry,x_size_lsc,y_size_lsc = Get_Extend_Landsat(dst_FileName)
-        shape=[x_size_lsc,y_size_lsc]
- 			
-        # Create the corrected signals of Landsat in 1 array
-        Reflect = Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx_dem,lry_dem,lrx_dem,uly_dem,shape,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr)
-
-        # Calculate temporal water mask
-        water_mask_temp=Water_Mask(shape,Reflect)       
-
-        # Calculate the NDVI and SAVI								
-        NDVI,SAVI,albedo = Calc_NDVI_SAVI_albedo(Reflect)
-
-        NDVI_FileName = os.path.join(NDVI_outfolder,'NDVI_LS_%s.tif'%Var_name)
-        save_GeoTiff_proy(dest, NDVI, NDVI_FileName, shape, nband=1)
-								
-        SAVI_FileName = os.path.join(SAVI_outfolder,'SAVI_LS_%s.tif'%Var_name)
-        save_GeoTiff_proy(dest, SAVI, SAVI_FileName, shape, nband=1)
-								
-        albedo_FileName = os.path.join(Albedo_outfolder,'Albedo_LS_%s.tif'%Var_name)
-        save_GeoTiff_proy(dest, albedo, albedo_FileName, shape, nband=1)
-
-################### Extract Meteo data for Landsat days from SEBAL Excel ##################
-        # Open the Meteo_Input sheet	
-        ws = wb['Meteo_Input']	
-        # ---------------------------- Instantaneous Air Temperature ------------
-        # Open meteo data, first try to open as value, otherwise as string (path)	  
-        try:
-            Temp_inst = float(ws['B%d' %number].value)                # Instantaneous Air Temperature (°C)
-
-        # if the data is not a value, than open as a string	
-        except:
-            Temp_inst_name = '%s' %str(ws['B%d' %number].value) 
-            Temp_inst_fileName = os.path.join(output_folder, 'Temp', 'Temp_inst_input.tif')
-            Temp_inst = Reshape_Reproject_Input_data(Temp_inst_name, Temp_inst_fileName, cos_zn_fileName)
-
-        try:
-            RH_inst = float(ws['D%d' %number].value)                # Instantaneous Relative humidity (%)
- 
-        # if the data is not a value, than open as a string							
-        except:
-             RH_inst_name = '%s' %str(ws['D%d' %number].value) 
-             RH_inst_fileName = os.path.join(output_folder, 'Temp', 'RH_inst_input.tif')
-             RH_inst = Reshape_Reproject_Input_data(RH_inst_name, RH_inst_fileName, cos_zn_fileName)	#################### Calculate thermal for Landsat ##########################################			
-
-        Rp = 0.91                        # Path radiance in the 10.4-12.5 µm band (W/m2/sr/µm)
-        tau_sky = 0.866                  # Narrow band transmissivity of air, range: [10.4-12.5 µm]
-        surf_temp_offset = 3             # Surface temperature offset for water 
- 
-        esat_inst = 0.6108 * np.exp(17.27 * Temp_inst / (Temp_inst + 237.3)) 													
-        eact_inst = RH_inst * esat_inst / 100
-        FPAR,tir_emis,Nitrogen,vegt_cover,LAI,b10_emissivity = Calc_vegt_para(NDVI,SAVI,water_mask_temp,shape)
-
-        LAI_FileName = os.path.join(LAI_outfolder,'LAI_LS_%s.tif' %Var_name)
-        save_GeoTiff_proy(dest, LAI, LAI_FileName, shape, nband=1)	
-								
-
-        therm_data = Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape)          
-        Surface_temp=Calc_surface_water_temp(Temp_inst,Landsat_nr,Lmax,Lmin,therm_data,b10_emissivity,k1_c,k2_c,eact_inst,shape,water_mask_temp,Bands_thermal,Rp,tau_sky,surf_temp_offset,Image_Type)
-        therm_data_FileName = os.path.join(Surface_Temperature_outfolder,'Surface_Temperature_LS_%s.tif' %Var_name)
-        save_GeoTiff_proy(dest, Surface_temp, therm_data_FileName, shape, nband=1)	
-								
-#################### Calculate NDVI and SAVI for VIIRS-PROBAV ##########################################	
-     
-    if Image_Type == 2:	
-    
-        # Define the bands that will be used
-        bands=['SM', 'B1', 'B2', 'B3', 'B4']  #'SM', 'BLUE', 'RED', 'NIR', 'SWIR'
-
-        # Set the index number at 0
-        index=0
-							
-        # create a zero array with the shape of the reprojected DEM file						
-        data_PROBAV=np.zeros((shape[1], shape[0]))
-        spectral_reflectance_PROBAV=np.zeros([shape[1], shape[0], 5])
-       
-        # constants
-        n188_float=248       # Now it is 248, but we do not exactly know what this really means and if this is for constant for all images.
-   
-        # write the data one by one to the spectral_reflectance_PROBAV       
-        for bandnmr in bands:
-
-            # Translate the PROBA-V names to the Landsat band names                
-            Band_number={'SM':7,'B1':8,'B2':10,'B3':9,'B4':11}
-
-            # Split the PROBA-V name (Do no change the names but keep the name as downloaded data from VITO)           
-            Name_PROBAV=Name_PROBAV_Image.split('_')
-
-            # Get the tile numbers of the PROBA-V           
-            X_PROBAV=int(Name_PROBAV[3][1:3])
-            Y_PROBAV=int(Name_PROBAV[3][4:6])
-
-            # Define the upperleft coordinate based on the tile number           
-            X_ul=-180+(10*X_PROBAV)
-            Y_ul=75-(10*Y_PROBAV)
- 
-            # Open the .hdf file              
-            Band_PROBAVhdf_fileName = os.path.join(input_folder, '%s.HDF5' % (Name_PROBAV_Image))   
-                    
-            # Open the dataset
-            g=gdal.Open(Band_PROBAVhdf_fileName)
+        NDVI_outfolder = os.path.join(output_folder,'NDVI') 				
+        SAVI_outfolder = os.path.join(output_folder,'SAVI') 
+        Albedo_outfolder = os.path.join(output_folder,'Albedo') 								
+        LAI_outfolder = os.path.join(output_folder,'LAI') 
+        Surface_Temperature_outfolder = os.path.join(output_folder,'Surface_Temperature') 
         
-            # open the subdataset to get the projection
-            sds_b3 = gdal.Open(g.GetSubDatasets()[Band_number[bandnmr]][0])
-            Data = sds_b3.GetRasterBand(1).ReadAsArray()
- 
-            # Define the x and y spacing           
-            X_spacing=float(10.0/int(Data.shape[0]))
-            Y_spacing=float(10.0/int(Data.shape[1]))
-            
-            # Define the georeference of the PROBA-V data
-            geo_PROBAV=[X_ul, X_spacing, 0, Y_ul, 0, -Y_spacing]
-		 									
-            # Define the name of the output file											
-            PROBAV_data_name=os.path.join(input_folder, '%s_%s.tif' % (Name_PROBAV_Image,bandnmr)) 									
-            dst_fileName=os.path.join(input_folder, PROBAV_data_name)
-            
-            # create gtiff output with the PROBA-V band
-            fmt = 'GTiff'
-            driver = gdal.GetDriverByName(fmt)
+        if not os.path.exists(NDVI_outfolder):
+            os.makedirs(NDVI_outfolder)
+        if not os.path.exists(SAVI_outfolder):
+            os.makedirs(SAVI_outfolder)								
+        if not os.path.exists(Albedo_outfolder):
+            os.makedirs(Albedo_outfolder)
+        if not os.path.exists(LAI_outfolder):
+            os.makedirs(LAI_outfolder)
+        if not os.path.exists(Surface_Temperature_outfolder):
+            os.makedirs(Surface_Temperature_outfolder)
 
-            dst_dataset = driver.Create(dst_fileName, int(Data.shape[1]), int(Data.shape[0]), 1,gdal.GDT_Float32)
-            dst_dataset.SetGeoTransform(geo_PROBAV)
-            
-            # set the reference info
-            srs = osr.SpatialReference()
-            srs.SetWellKnownGeogCS("WGS84")
-            dst_dataset.SetProjection(srs.ExportToWkt())
-           
-            # write the array in the geotiff band
-            dst_dataset.GetRasterBand(1).WriteArray(Data)
-            dst_dataset = None
- 
-            # Open the PROBA-V band in SEBAL											
-            g=gdal.Open(PROBAV_data_name.replace("\\","/")) 
-	 										
-            # If the data cannot be opened, change the extension											
-            if g is None:
-                PROBAV_data_name=os.path.join(input_folder, '%s_%s.tiff' % (Name_PROBAV_Image,bandnmr))  
-  
-            # Reproject the PROBA-V band  to match DEM's resolution          
-            PROBAV = reproject_dataset_example(
-                              PROBAV_data_name, lon_fileName)
-
-            # Open the reprojected PROBA-V band data                         
-            data_PROBAV_DN = PROBAV.GetRasterBand(1).ReadAsArray(0, 0, ncol, nrow)
-	 										
-            # Define the filename to store the cropped Landsat image
-            dst_FileName = os.path.join(output_folder, 'Output_PROBAV','proy_PROBAV_%s.tif' % bandnmr)
-		 									
-            # close the PROBA-V 											
-            g=None
-                                   
-            # If the band data is not SM change the DN values into PROBA-V values and write into the spectral_reflectance_PROBAV                      
-            if bandnmr is not 'SM':  
-                data_PROBAV[:, :]=data_PROBAV_DN/2000                           
-                spectral_reflectance_PROBAV[:, :, index]=data_PROBAV[:, :]
-               
-            # If the band data is the SM band than write the data into the spectral_reflectance_PROBAV  and create cloud mask            
-            else:
-                data_PROBAV[:, :]=data_PROBAV_DN
-                Cloud_Mask_PROBAV=np.zeros((shape[1], shape[0]))
-                Cloud_Mask_PROBAV[data_PROBAV[:,:]!=n188_float]=1
-                spectral_reflectance_PROBAV[:, :, index]=Cloud_Mask_PROBAV
-  
-            # Change the spectral reflectance to meet certain limits                               
-            spectral_reflectance_PROBAV[:, :, index]=np.where(spectral_reflectance_PROBAV[:, :, index]<=0,np.nan,spectral_reflectance_PROBAV[:, :, index])   
-            spectral_reflectance_PROBAV[:, :, index]=np.where(spectral_reflectance_PROBAV[:, :, index]>=150,np.nan,spectral_reflectance_PROBAV[:, :, index])   
-  										
-            # Go to the next index 									
-            index=index+1
- 
-        # Bands in PROBAV spectral reflectance
-        # 0 = MS
-        # 1 = BLUE
-        # 2 = NIR
-        # 3 = RED
-        # 4 = SWIR
-       
-        # Calculate SAVI based on PROBA-V
-        L = 0.5							
-        SAVI = (1+L)*(spectral_reflectance_PROBAV[:, :, 3]-spectral_reflectance_PROBAV[:, :, 2])/(L+spectral_reflectance_PROBAV[:, :, 2]+spectral_reflectance_PROBAV[:, :, 3])
- 
-        # Calculate surface albedo based on PROBA-V
-        Surface_Albedo_PROBAV = 0.219 * spectral_reflectance_PROBAV[:, :, 1] + 0.361 * spectral_reflectance_PROBAV[:, :, 2] + 0.379 * spectral_reflectance_PROBAV[:, :, 3] + 0.041 * spectral_reflectance_PROBAV[:, :, 4]
-  
-        # Create Water mask based on PROBA-V             
-        water_mask_temp = np.zeros((shape[1], shape[0])) 
-        water_mask_temp[np.logical_and(spectral_reflectance_PROBAV[:, :, 2] >= spectral_reflectance_PROBAV[:, :, 3],data_DEM>0)]=1
-
-        # Reproject the Veg_height to the LAI projection
-        # dest = reproject_dataset3(Veg_Height_proj_FileName, LAI_FileName)			
-        Albedo_FileName = os.path.join(Albedo_outfolder,'Albedo_PROBAV_%s.tif' %Var_name) 
 								
-        save_GeoTiff_proy(dest, Surface_Albedo_PROBAV, Albedo_FileName, shape, nband=1)	  
+        # Extract the Path to the DEM map from the excel file
+        DEM_fileName = '%s' %str(ws['E%d' % number].value) #'DEM_HydroShed_m'  
 
-        # Calculate the NDVI based on PROBA-V     
-        n218_memory = spectral_reflectance_PROBAV[:, :, 2] + spectral_reflectance_PROBAV[:, :, 3]
-        NDVI = np.zeros((shape[1], shape[0]))
-        NDVI[n218_memory != 0] =  ( spectral_reflectance_PROBAV[:, :, 3][n218_memory != 0] - spectral_reflectance_PROBAV[:, :, 2][n218_memory != 0] )/ ( spectral_reflectance_PROBAV[:, :, 2][n218_memory != 0] + spectral_reflectance_PROBAV[:, :, 3][n218_memory != 0] )
+    ######################## Extract general data for Landsat ##########################################	
+        if Image_Type == 1:	
+       
+            # Open the Landsat_Input sheet				
+            ws = wb['Landsat_Input']		
+      
+            # Extract Landsat name, number and amount of thermal bands from excel file 
+            Name_Landsat_Image = str(ws['B%d' % number].value)    # From glovis.usgs.gov
+            Landsat_nr = int(ws['C%d' % number].value)            # Type of Landsat (LS) image used (LS5, LS7, or LS8)
+            Bands_thermal = int(ws['D%d' %number].value)         # Number of LS bands to use to retrieve land surface 
+ 
+            # Pixel size of the model
+            pixel_spacing=int(30) 
+            
+            # the path to the MTL file of landsat				
+            Landsat_meta_fileName = os.path.join(input_folder, '%s_MTL.txt' % Name_Landsat_Image)
+            
+            # read out the general info out of the MTL file
+            year, DOY, hour, minutes, UTM_Zone, Sun_elevation = info_general_metadata(Landsat_meta_fileName) # call definition info_general_metadata
+            date=datetime.datetime.strptime('%s %s'%(year,DOY), '%Y %j')
+            month = date.month
+            day = date.day
+    ######################## Extract general data for VIIRS-PROBAV ##########################################	
 
-        NDVI_FileName = os.path.join(NDVI_outfolder,'NDVI_PROBAV_%s.tif' %Var_name)
-        save_GeoTiff_proy(dest, NDVI, NDVI_FileName, shape, nband=1)	
+        if Image_Type == 2:	
+            
+            # Open the VIIRS_PROBAV_Input sheet					
+            ws = wb['VIIRS_PROBAV_Input']
+            
+            # Extract the name of the thermal and quality VIIRS image from the excel file	
+            Name_VIIRS_Image_TB = '%s' %str(ws['B%d' % number].value)
+            
+            # Extract the name to the PROBA-V image from the excel file	
+            Name_PROBAV_Image = '%s' %str(ws['D%d' % number].value)    # Must be a tiff file 
+                 
+            # Pixel size of the model
+            pixel_spacing=int(100) 	
+ 		
+            # UTM Zone of the end results					
+            UTM_Zone = float(ws['G%d' % number].value)
 
-        SAVI_FileName = os.path.join(SAVI_outfolder,'SAVI_PROBAV_%s.tif' %Var_name)
-        save_GeoTiff_proy(dest, SAVI, SAVI_FileName, shape, nband=1)															
+            #Get time from the VIIRS dataset name (IMPORTANT TO KEEP THE TEMPLATE OF THE VIIRS NAME CORRECT example: npp_viirs_i05_20150701_124752_wgs84_fit.tif)
+            Total_Day_VIIRS = Name_VIIRS_Image_TB.split('_')[3]
+            Total_Time_VIIRS = Name_VIIRS_Image_TB.split('_')[4]
 				
-        # Calculate and save the LAI based on NDVI and SAVI 
-        FPAR,tir_emis,Nitrogen,vegt_cover,LAI,b10_emissivity=Calc_vegt_para(NDVI,SAVI,water_mask_temp,shape)
-        LAI_FileName = os.path.join(LAI_outfolder,'LAI_PROBAV_%s.tif' %Var_name) 				
-        save_GeoTiff_proy(dest, LAI, LAI_FileName, shape, nband=1)	
+            # Get the information out of the VIIRS name
+            year = int(Total_Day_VIIRS[1:5])
+            month = int(Total_Day_VIIRS[5:7])
+            day = int(Total_Day_VIIRS[7:9])
+            Startdate = '%d-%02d-%02d' % (year,month,day)
+            DOY=datetime.datetime.strptime(Startdate,'%Y-%m-%d').timetuple().tm_yday
+            hour = int(Total_Time_VIIRS[1:3])
+            minutes = int(Total_Time_VIIRS[3:5])								
 
-################################## Calculate VIIRS surface temperature ########################
+    ######################## Extract general data from DEM file and create Slope map ##########################################	
+        # Variable date name
+        Var_name = '%d%02d%02d' %(year, month, day)
+    								
+        # Open DEM and create Latitude and longitude files
+        lat,lon,lat_fileName,lon_fileName=DEM_lat_lon(DEM_fileName,output_folder_temp)
+    
+        # Reproject from Geog Coord Syst to UTM -
+        # 1) DEM - Original DEM coordinates is Geographic: lat, lon
+        dest, ulx_dem, lry_dem, lrx_dem, uly_dem, epsg_to = reproject_dataset(
+                       DEM_fileName, pixel_spacing, UTM_Zone=UTM_Zone)
+        band = dest.GetRasterBand(1)   # Get the reprojected dem band
+        ncol = dest.RasterXSize        # Get the reprojected dem column size
+        nrow = dest.RasterYSize        # Get the reprojected dem row size
+        shape=[ncol, nrow]
+       
+        # Read out the DEM band and print the DEM properties
+        data_DEM = band.ReadAsArray(0, 0, ncol, nrow)
 
-        # Define the VIIRS thermal data name
-        VIIRS_data_name=os.path.join(input_folder, '%s' % (Name_VIIRS_Image_TB))
+        # 2) Latitude file - reprojection    
+        # reproject latitude to the landsat projection and save as tiff file																																
+        lat_rep, ulx_dem, lry_dem, lrx_dem, uly_dem, epsg_to = reproject_dataset(
+                        lat_fileName, pixel_spacing,  UTM_Zone=UTM_Zone)
+                    
+        # Get the reprojected latitude data															
+        lat_proy = lat_rep.GetRasterBand(1).ReadAsArray(0, 0, ncol, nrow)
+     
+        # 3) Longitude file - reprojection
+        # reproject longitude to the landsat projection	 and save as tiff file	
+        lon_rep, ulx_dem, lry_dem, lrx_dem, uly_dem, epsg_to = reproject_dataset(lon_fileName, pixel_spacing, UTM_Zone=UTM_Zone)
+
+        # Get the reprojected longitude data	
+        lon_proy = lon_rep.GetRasterBand(1).ReadAsArray(0, 0, ncol, nrow)
+        lon_fileName = os.path.join(output_folder_temp,'lon_resh.tif')
+        save_GeoTiff_proy(dest, lon_proy, lon_fileName, shape, nband=1)	
+				
+        # Calculate slope and aspect from the reprojected DEM
+        deg2rad,rad2deg,slope,aspect=Calc_Gradient(data_DEM,pixel_spacing)
+
+        # calculate the coz zenith angle
+        Ra_mountain_24, Ra_inst, cos_zn, dr, phi, delta = Calc_Ra_Mountain(lon,DOY,hour,minutes,lon_proy,lat_proy,slope,aspect) 
+        cos_zn_fileName = os.path.join(output_folder_temp,'coz_zn.tif')
+        save_GeoTiff_proy(dest, coz_zn, cos_zn_fileName, shape, nband=1)			
+
+        # Reproject coz zenith angle    
+        dst_FileName_cos = os.path.join(output_folder_temp,'resh_cos_zn.tif')
+        cos_zn_resh = reshape(cos_zn_fileName, dst_FileName_cos, 30, var='cos_zn')
+        
+        # Calculate Transmissivity
+        quarters_hours = round(minutes/15.)
+        
+        dest_DSSF = reproject_dataset_example(dataset, dataset_example)
+        
+        # Open excel file en kijk of naar het nummer van de transmissifity die gebruikt gaat worden.
+        # Als deze 1 is doe niks is deze 2 en zijn de velden leeg dan produceer deze waardes.
+        # Dan moet wel een LANDSAF path gedefineerd zijn waar de waardes (tiff files DSSF instaan)
+        # file is in W/m2 en heeft een factor 10.
+
+
+
+
+
+
+    #################### Calculate NDVI and SAVI for LANDSAT ##########################################	
+
+        if Image_Type == 1:	
+
+            # Define bands used for each Landsat number
+            if Landsat_nr == 5 or Landsat_nr == 7:
+                Bands = np.array([1, 2, 3, 4, 5, 7, 6])
+            elif Landsat_nr == 8:
+                Bands = np.array([2, 3, 4, 5, 6, 7, 10, 11])  
+            else:
+                print 'Landsat image not supported, use Landsat 7 or 8'
+
+            # Open MTL landsat and get the correction parameters   
+            Landsat_meta_fileName = os.path.join(input_folder, '%s_MTL.txt' % Name_Landsat_Image)
+            Lmin, Lmax, k1_c, k2_c = info_band_metadata(Landsat_meta_fileName, Bands)
+           
+            # Mean solar exo-atmospheric irradiance for each band (W/m2/microm)
+            # for the different Landsat images (L5, L7, or L8)
+            ESUN_L5 = np.array([1983, 1796, 1536, 1031, 220, 83.44])
+            ESUN_L7 = np.array([1997, 1812, 1533, 1039, 230.8, 84.9])
+            ESUN_L8 = np.array([1973.28, 1842.68, 1565.17, 963.69, 245, 82.106])
+    
+            # Open one band - To get the metadata of the landsat images only once (to get the extend)
+            src_FileName = os.path.join(input_folder, '%s_B2.TIF' % Name_Landsat_Image)  # before 10!
+            ls,band_data,ulx,uly,lrx,lry,x_size_ls,y_size_ls = Get_Extend_Landsat(src_FileName)
+         
+            # Crop the Landsat images to the DEM extent -
+            dst_FileName = os.path.join(output_folder_temp,'cropped_LS_b2.tif')  # Before 10 !!
+     							
+            # Clip the landsat image to match the DEM map											
+            fullCmd = ' '.join(['gdalwarp -te %s %s %s %s' % (ulx_dem, lry_dem,lrx_dem, uly_dem), src_FileName, dst_FileName])
+            process = subprocess.Popen(fullCmd)
+            process.wait()
+   
+            # Get the extend of the remaining landsat file	after clipping based on the DEM file	
+            lsc,band_data,ulx,uly,lrx,lry,x_size_lsc,y_size_lsc = Get_Extend_Landsat(dst_FileName)
+            shape=[x_size_lsc,y_size_lsc]
+ 			
+            # Create the corrected signals of Landsat in 1 array
+            Reflect = Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx_dem,lry_dem,lrx_dem,uly_dem,shape,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr)
+
+            # Calculate temporal water mask
+            water_mask_temp=Water_Mask(shape,Reflect)       
+
+            # Calculate the NDVI and SAVI								
+            NDVI,SAVI,albedo = Calc_NDVI_SAVI_albedo(Reflect)
+
+            NDVI_FileName = os.path.join(NDVI_outfolder,'NDVI_LS_%s.tif'%Var_name)
+            save_GeoTiff_proy(dest, NDVI, NDVI_FileName, shape, nband=1)
+								
+            SAVI_FileName = os.path.join(SAVI_outfolder,'SAVI_LS_%s.tif'%Var_name)
+            save_GeoTiff_proy(dest, SAVI, SAVI_FileName, shape, nband=1)
+								
+            albedo_FileName = os.path.join(Albedo_outfolder,'Albedo_LS_%s.tif'%Var_name)
+            save_GeoTiff_proy(dest, albedo, albedo_FileName, shape, nband=1)
+
+    ################### Extract Meteo data for Landsat days from SEBAL Excel ##################
+            # Open the Meteo_Input sheet	
+            ws = wb['Meteo_Input']	
+            # ---------------------------- Instantaneous Air Temperature ------------
+            # Open meteo data, first try to open as value, otherwise as string (path)	  
+            try:
+                Temp_inst = float(ws['B%d' %number].value)                # Instantaneous Air Temperature (°C)
+
+            # if the data is not a value, than open as a string	
+            except:
+                Temp_inst_name = '%s' %str(ws['B%d' %number].value) 
+                Temp_inst_fileName = os.path.join(output_folder, 'Temp', 'Temp_inst_input.tif')
+                Temp_inst = Reshape_Reproject_Input_data(Temp_inst_name, Temp_inst_fileName, cos_zn_fileName)
+
+            try:
+                RH_inst = float(ws['D%d' %number].value)                # Instantaneous Relative humidity (%)
+ 
+            # if the data is not a value, than open as a string							
+            except:
+                RH_inst_name = '%s' %str(ws['D%d' %number].value) 
+                RH_inst_fileName = os.path.join(output_folder, 'Temp', 'RH_inst_input.tif')
+                RH_inst = Reshape_Reproject_Input_data(RH_inst_name, RH_inst_fileName, cos_zn_fileName)	#################### Calculate thermal for Landsat ##########################################			
+
+            Rp = 0.91                        # Path radiance in the 10.4-12.5 µm band (W/m2/sr/µm)
+            tau_sky = 0.866                  # Narrow band transmissivity of air, range: [10.4-12.5 µm]
+            surf_temp_offset = 3             # Surface temperature offset for water 
+ 
+            esat_inst = 0.6108 * np.exp(17.27 * Temp_inst / (Temp_inst + 237.3)) 													
+            eact_inst = RH_inst * esat_inst / 100
+            FPAR,tir_emis,Nitrogen,vegt_cover,LAI,b10_emissivity = Calc_vegt_para(NDVI,SAVI,water_mask_temp,shape)
+
+            LAI_FileName = os.path.join(LAI_outfolder,'LAI_LS_%s.tif' %Var_name)
+            save_GeoTiff_proy(dest, LAI, LAI_FileName, shape, nband=1)	
+								
+
+            therm_data = Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape)          
+            Surface_temp=Calc_surface_water_temp(Temp_inst,Landsat_nr,Lmax,Lmin,therm_data,b10_emissivity,k1_c,k2_c,eact_inst,shape,water_mask_temp,Bands_thermal,Rp,tau_sky,surf_temp_offset,Image_Type)
+            therm_data_FileName = os.path.join(Surface_Temperature_outfolder,'Surface_Temperature_LS_%s.tif' %Var_name)
+            save_GeoTiff_proy(dest, Surface_temp, therm_data_FileName, shape, nband=1)	
+								
+     #################### Calculate NDVI and SAVI for VIIRS-PROBAV ##########################################	
+     
+        if Image_Type == 2:	
+    
+            # Define the bands that will be used
+            bands=['SM', 'B1', 'B2', 'B3', 'B4']  #'SM', 'BLUE', 'RED', 'NIR', 'SWIR'
+
+            # Set the index number at 0
+            index=0
 							
-        # Reproject VIIRS thermal data								
-        VIIRS = reproject_dataset_example(VIIRS_data_name, LAI_FileName)
-																
-        # Open VIIRS thermal data																		
-        data_VIIRS = VIIRS.GetRasterBand(1).ReadAsArray()    
+            # create a zero array with the shape of the reprojected DEM file						
+            data_PROBAV=np.zeros((shape[1], shape[0]))
+            spectral_reflectance_PROBAV=np.zeros([shape[1], shape[0], 5])
+       
+            # constants
+            n188_float=248       # Now it is 248, but we do not exactly know what this really means and if this is for constant for all images.
+   
+            # write the data one by one to the spectral_reflectance_PROBAV       
+            for bandnmr in bands:
+
+                # Translate the PROBA-V names to the Landsat band names                
+                Band_number={'SM':7,'B1':8,'B2':10,'B3':9,'B4':11}
+
+                # Split the PROBA-V name (Do no change the names but keep the name as downloaded data from VITO)           
+                Name_PROBAV=Name_PROBAV_Image.split('_')
+
+                # Get the tile numbers of the PROBA-V           
+                X_PROBAV=int(Name_PROBAV[3][1:3])
+                Y_PROBAV=int(Name_PROBAV[3][4:6])
+
+                # Define the upperleft coordinate based on the tile number           
+                X_ul=-180+(10*X_PROBAV)
+                Y_ul=75-(10*Y_PROBAV)
+ 
+                # Open the .hdf file              
+                Band_PROBAVhdf_fileName = os.path.join(input_folder, '%s.HDF5' % (Name_PROBAV_Image))   
+                    
+                # Open the dataset
+                g=gdal.Open(Band_PROBAVhdf_fileName)
+        
+                # open the subdataset to get the projection
+                sds_b3 = gdal.Open(g.GetSubDatasets()[Band_number[bandnmr]][0])
+                Data = sds_b3.GetRasterBand(1).ReadAsArray()
+ 
+                # Define the x and y spacing           
+                X_spacing=float(10.0/int(Data.shape[0]))
+                Y_spacing=float(10.0/int(Data.shape[1]))
+            
+                # Define the georeference of the PROBA-V data
+                geo_PROBAV=[X_ul, X_spacing, 0, Y_ul, 0, -Y_spacing]
+		 									
+                # Define the name of the output file											
+                PROBAV_data_name=os.path.join(input_folder, '%s_%s.tif' % (Name_PROBAV_Image,bandnmr)) 									
+                dst_fileName=os.path.join(input_folder, PROBAV_data_name)
+            
+                # create gtiff output with the PROBA-V band
+                fmt = 'GTiff'
+                driver = gdal.GetDriverByName(fmt)
+
+                dst_dataset = driver.Create(dst_fileName, int(Data.shape[1]), int(Data.shape[0]), 1,gdal.GDT_Float32)
+                dst_dataset.SetGeoTransform(geo_PROBAV)
+            
+                # set the reference info
+                srs = osr.SpatialReference()
+                srs.SetWellKnownGeogCS("WGS84")
+                dst_dataset.SetProjection(srs.ExportToWkt())
+           
+                # write the array in the geotiff band
+                dst_dataset.GetRasterBand(1).WriteArray(Data)
+                dst_dataset = None
+ 
+                # Open the PROBA-V band in SEBAL											
+                g=gdal.Open(PROBAV_data_name.replace("\\","/")) 
+	 										
+                # If the data cannot be opened, change the extension											
+                if g is None:
+                    PROBAV_data_name=os.path.join(input_folder, '%s_%s.tiff' % (Name_PROBAV_Image,bandnmr))  
+  
+                # Reproject the PROBA-V band  to match DEM's resolution          
+                PROBAV = reproject_dataset_example(
+                                  PROBAV_data_name, lon_fileName)
+
+                # Open the reprojected PROBA-V band data                         
+                data_PROBAV_DN = PROBAV.GetRasterBand(1).ReadAsArray(0, 0, ncol, nrow)
+	 										
+                # Define the filename to store the cropped Landsat image
+                dst_FileName = os.path.join(output_folder, 'Output_PROBAV','proy_PROBAV_%s.tif' % bandnmr)
+		 									
+                # close the PROBA-V 											
+                g=None
+                                   
+                # If the band data is not SM change the DN values into PROBA-V values and write into the spectral_reflectance_PROBAV                      
+                if bandnmr is not 'SM':  
+                    data_PROBAV[:, :]=data_PROBAV_DN/2000                           
+                    spectral_reflectance_PROBAV[:, :, index]=data_PROBAV[:, :]
+                
+                # If the band data is the SM band than write the data into the spectral_reflectance_PROBAV  and create cloud mask            
+                else:
+                    data_PROBAV[:, :]=data_PROBAV_DN
+                    Cloud_Mask_PROBAV=np.zeros((shape[1], shape[0]))
+                    Cloud_Mask_PROBAV[data_PROBAV[:,:]!=n188_float]=1
+                    spectral_reflectance_PROBAV[:, :, index]=Cloud_Mask_PROBAV
+  
+                # Change the spectral reflectance to meet certain limits                               
+                spectral_reflectance_PROBAV[:, :, index]=np.where(spectral_reflectance_PROBAV[:, :, index]<=0,np.nan,spectral_reflectance_PROBAV[:, :, index])   
+                spectral_reflectance_PROBAV[:, :, index]=np.where(spectral_reflectance_PROBAV[:, :, index]>=150,np.nan,spectral_reflectance_PROBAV[:, :, index])   
+  										
+                # Go to the next index 									
+                index=index+1
+ 
+            # Bands in PROBAV spectral reflectance
+            # 0 = MS
+            # 1 = BLUE
+            # 2 = NIR
+            # 3 = RED
+            # 4 = SWIR
+       
+            # Calculate SAVI based on PROBA-V
+            L = 0.5							
+            SAVI = (1+L)*(spectral_reflectance_PROBAV[:, :, 3]-spectral_reflectance_PROBAV[:, :, 2])/(L+spectral_reflectance_PROBAV[:, :, 2]+spectral_reflectance_PROBAV[:, :, 3])
+ 
+            # Calculate surface albedo based on PROBA-V
+            Surface_Albedo_PROBAV = 0.219 * spectral_reflectance_PROBAV[:, :, 1] + 0.361 * spectral_reflectance_PROBAV[:, :, 2] + 0.379 * spectral_reflectance_PROBAV[:, :, 3] + 0.041 * spectral_reflectance_PROBAV[:, :, 4]
+  
+            # Create Water mask based on PROBA-V             
+            water_mask_temp = np.zeros((shape[1], shape[0])) 
+            water_mask_temp[np.logical_and(spectral_reflectance_PROBAV[:, :, 2] >= spectral_reflectance_PROBAV[:, :, 3],data_DEM>0)]=1
+
+            # Reproject the Veg_height to the LAI projection
+            # dest = reproject_dataset3(Veg_Height_proj_FileName, LAI_FileName)			
+            Albedo_FileName = os.path.join(Albedo_outfolder,'Albedo_PROBAV_%s.tif' %Var_name) 
+								
+            save_GeoTiff_proy(dest, Surface_Albedo_PROBAV, Albedo_FileName, shape, nband=1)	  
+
+            # Calculate the NDVI based on PROBA-V     
+            n218_memory = spectral_reflectance_PROBAV[:, :, 2] + spectral_reflectance_PROBAV[:, :, 3]
+            NDVI = np.zeros((shape[1], shape[0]))
+            NDVI[n218_memory != 0] =  ( spectral_reflectance_PROBAV[:, :, 3][n218_memory != 0] - spectral_reflectance_PROBAV[:, :, 2][n218_memory != 0] )/ ( spectral_reflectance_PROBAV[:, :, 2][n218_memory != 0] + spectral_reflectance_PROBAV[:, :, 3][n218_memory != 0] )
+
+            NDVI_FileName = os.path.join(NDVI_outfolder,'NDVI_PROBAV_%s.tif' %Var_name)
+            save_GeoTiff_proy(dest, NDVI, NDVI_FileName, shape, nband=1)	
+
+            SAVI_FileName = os.path.join(SAVI_outfolder,'SAVI_PROBAV_%s.tif' %Var_name)
+            save_GeoTiff_proy(dest, SAVI, SAVI_FileName, shape, nband=1)															
 				
-        # Define the thermal VIIRS output name
-        proyVIIRS_fileName = os.path.join(Surface_Temperature_outfolder, 'Surface_Temp_VIIRS_%s.tif' %Var_name)
+            # Calculate and save the LAI based on NDVI and SAVI 
+            FPAR,tir_emis,Nitrogen,vegt_cover,LAI,b10_emissivity=Calc_vegt_para(NDVI,SAVI,water_mask_temp,shape)
+            LAI_FileName = os.path.join(LAI_outfolder,'LAI_PROBAV_%s.tif' %Var_name) 				
+            save_GeoTiff_proy(dest, LAI, LAI_FileName, shape, nband=1)	
+
+    ################################## Calculate VIIRS surface temperature ########################
+
+            # Define the VIIRS thermal data name
+            VIIRS_data_name=os.path.join(input_folder, '%s' % (Name_VIIRS_Image_TB))
+							
+            # Reproject VIIRS thermal data								
+            VIIRS = reproject_dataset_example(VIIRS_data_name, LAI_FileName)
+																
+            # Open VIIRS thermal data																		
+            data_VIIRS = VIIRS.GetRasterBand(1).ReadAsArray()    
+				
+            # Define the thermal VIIRS output name
+            proyVIIRS_fileName = os.path.join(Surface_Temperature_outfolder, 'Surface_Temp_VIIRS_%s.tif' %Var_name)
 	 											
-        # Save the thermal VIIRS data 												
-        save_GeoTiff_proy(dest, data_VIIRS, proyVIIRS_fileName, shape, nband=1)	
+            # Save the thermal VIIRS data 												
+            save_GeoTiff_proy(dest, data_VIIRS, proyVIIRS_fileName, shape, nband=1)	
 
 ################################################### HANTS #######################################################
 
@@ -625,8 +643,8 @@ def Calc_Gradient(dataset,pixel_spacing):
     aspect = 180 + aspect
 
     return(deg2rad,rad2deg,slope,aspect)
-
-#------------------------------------------------------------------------------ 
+  
+#------------------------------------------------------------------------------
 def Calc_Ra_Mountain(lon,DOY,hour,minutes,lon_proy,lat_proy,slope,aspect):    
     """
     Calculates the extraterrestiral solar radiation by using the date, slope and aspect.
@@ -636,8 +654,15 @@ def Calc_Ra_Mountain(lon,DOY,hour,minutes,lon_proy,lat_proy,slope,aspect):
     deg2rad = np.pi / 180.0  # Factor to transform from degree to rad
     Min_cos_zn = 0.1  # Min value for cos zenith angle
     Max_cos_zn = 1.0  # Max value for cos zenith angle
+    Gsc = 1367        # Solar constant (W / m2)
     Loc_time = float(hour) + float(minutes)/60  # Local time (hours)
     
+    # Rounded difference of the local time from Greenwich (GMT) (hours):
+    offset_GTM = round(np.sign(lon[int(lon.shape[0])/2, int(lon.shape[1])/2]) * lon[int(lon.shape[0])/2,int(lon.shape[1])/2] * 24 / 360)
+                       
+    print '  Local time: ', '%0.3f' % Loc_time
+    print '  Difference of local time (LT) from Greenwich (GMT): ', offset_GTM
+
     # 1. Calculation of extraterrestrial solar radiation for slope and aspect
     # Computation of Hour Angle (HRA = w)
     B = 360./365 * (DOY-81)           # (degrees)
@@ -652,9 +677,232 @@ def Calc_Ra_Mountain(lon,DOY,hour,minutes,lon_proy,lat_proy,slope,aspect):
     cos_zn= AngleSlope(a,b,c,w)
     cos_zn = cos_zn.clip(Min_cos_zn, Max_cos_zn)
     
-    dr = 1 + 0.033 * cos(DOY*2*pi/365)  # Inverse relative distance Earth-Sun
+    print 'Average Cos Zenith Angle: ', '%0.3f (Radians)' % np.nanmean(cos_zn)
 
-    return(dr,cos_zn)
+    dr = 1 + 0.033 * cos(DOY*2*pi/365)  # Inverse relative distance Earth-Sun
+    # Instant. extraterrestrial solar radiation (W/m2), Allen et al.(2006):
+    Ra_inst = Gsc * cos_zn * dr              
+
+    # 24-hours extraterrestrial radiation
+    # 1.) determine if there are one or two periods of sun
+    # 2.) calculate the 24-hours extraterrestrial radiation if there are two periods of sun
+    # 3.) calculate the 24-hours extraterrestrial radiation if there is one period of sun
+    
+    #1.) determine amount of sun periods
+    Ra_24 = np.zeros(np.shape(lat_proy))*np.nan
+    constant=Gsc*dr/(2*np.pi)
+    TwoPeriod= TwoPeriods(delta,s,phi)  # all input in radians
+    
+    #2.) calculate the 24-hours extraterrestrial radiation (2 periods)
+    ID = np.where(np.ravel(TwoPeriod==True))
+    Ra_24.flat[ID]=TwoPeriodSun(constant,delta,s.flat[ID],gamma.flat[ID],phi.flat[ID])
+    
+    #3.) calculate the 24-hours extraterrestrial radiation (1 period)
+    ID = np.where(np.ravel(TwoPeriod==False))
+    Ra_24.flat[ID]=OnePeriodSun(constant,delta,s.flat[ID],gamma.flat[ID],phi.flat[ID])
+        
+    # Horizontal surface
+    ws = np.arccos(-np.tan(delta) * np.tan(phi))  # Sunrise/sunset time angle
+    
+    # Extraterrestial radiation for a horizontal surface for 24-h period:
+    Ra_hor_24 = (Gsc * dr / np.pi * (np.sin(delta) * np.sin(phi) * ws + np.cos(delta) * np.cos(phi) * np.sin(ws)))
+    # cos_theta_flat = (np.sin(delta) * np.sin(phi) + np.cos(delta) * np.cos(phi) * np.cos(w))
+
+    # Mountain radiation
+    Ra_mountain_24 = np.where(Ra_24 > Min_cos_zn * Ra_hor_24, Ra_24 / np.cos(s),
+                           Ra_hor_24)
+    Ra_mountain_24[Ra_mountain_24 > 600.0] = 600.0
+    return(Ra_mountain_24, Ra_inst, cos_zn, dr, phi, delta)
+
+#------------------------------------------------------------------------------   
+def TwoPeriodSun(constant,delta,s,gamma,phi):  
+    '''
+    Based on Richard G. Allen 2006
+    Calculate the 24-hours extraterrestrial radiation when there are two sun period
+    '''
+    A1, A2 = SunHours(delta,s,gamma,phi)
+    a,b,c = Constants(delta,s,gamma,phi)
+    riseSlope, setSlope = BoundsSlope(a,b,c)
+    B1 = np.maximum(riseSlope,setSlope)
+    B2 = np.minimum(riseSlope,setSlope)
+    Angle_B1 = AngleSlope(a,b,c,B1)
+    Angle_B2 = AngleSlope(a,b,c,B2)
+   
+    B1[abs(Angle_B1) > 0.001] = np.pi - B1[abs(Angle_B1) > 0.001]  
+    B2[abs(Angle_B2) > 0.001] = -np.pi - B2[abs(Angle_B2) > 0.001]    
+
+    # Check if two periods really exist
+    ID = np.ravel_multi_index(np.where(np.logical_and(B2 >= A1, B1 >= A2) == True),a.shape)
+    Val = IntegrateSlope(constant,B2.flat[ID],B1.flat[ID],delta,s.flat[ID],gamma.flat[ID],phi.flat[ID])
+    ID = ID[Val < 0]
+
+    # Finally calculate resulting values
+    Vals = np.zeros(B1.shape)
+
+    Vals.flat[ID] = (IntegrateSlope(constant,A1.flat[ID],B2.flat[ID],delta,s.flat[ID],gamma.flat[ID],phi.flat[ID])  + 
+                   IntegrateSlope(constant,B1.flat[ID],A2.flat[ID],delta,s.flat[ID],gamma.flat[ID],phi.flat[ID]))
+    ID = np.ravel_multi_index(np.where(Vals == 0),a.shape)   
+    Vals.flat[ID] = IntegrateSlope(constant,A1.flat[ID],A2.flat[ID],delta,s.flat[ID],gamma.flat[ID],phi.flat[ID])
+    return(Vals)
+    
+#------------------------------------------------------------------------------    
+def OnePeriodSun(constant,delta,s,gamma,phi):
+    '''
+    Based on Richard G. Allen 2006
+    Calculate the 24-hours extraterrestrial radiation when there is one sun period
+    '''
+    sunrise,sunset = SunHours(delta,s,gamma,phi)    
+    Vals=IntegrateSlope(constant,sunrise,sunset,delta,s,gamma,phi)
+    return(Vals)
+
+#------------------------------------------------------------------------------       
+def IntegrateSlope(constant,sunrise,sunset,delta,s,gamma,phi):
+    '''
+    Based on Richard G. Allen 2006 equation 5
+    Calculate the 24 hours extraterrestrial radiation
+    '''
+    # correct the sunset and sunrise angels for days that have no sunset or no sunrise 
+    SunOrNoSun = np.logical_or(((np.abs(delta + phi)) > (np.pi/2)),((np.abs(delta - phi)) > (np.pi/2)))
+    integral=np.zeros(s.shape)
+    ID = np.where(np.ravel(SunOrNoSun==True))
+    
+    # No sunset
+    if abs(delta+phi.flat[ID])>(np.pi/2):
+        sunset1=np.pi
+        sunrise1=-np.pi
+        integral.flat[ID] = constant * (np.sin(delta)*np.sin(phi)*np.cos(s)*(sunset1-sunrise1) 
+            - np.sin(delta)*np.cos(phi)*np.sin(s)*np.cos(gamma)*(sunset1-sunrise1)
+            + np.cos(delta)*np.cos(phi)*np.cos(s)*(np.sin(sunset1)-np.sin(sunrise1))
+            + np.cos(delta)*np.sin(phi)*np.sin(s)*np.cos(gamma)*(np.sin(sunset1)-np.sin(sunrise1))
+            - np.cos(delta)*np.sin(s)*np.sin(gamma)*(np.cos(sunset1)-np.cos(sunrise1)))
+   
+    # No sunrise
+    elif np.abs(delta-phi.flat[ID])>(np.pi/2):
+        integral.flat[ID]=constant * (np.sin(delta)*np.sin(phi)*np.cos(s)*(0) 
+            - np.sin(delta)*np.cos(phi)*np.sin(s)*np.cos(gamma)*(0)
+            + np.cos(delta)*np.cos(phi)*np.cos(s)*(np.sin(0)-np.sin(0))
+            + np.cos(delta)*np.sin(phi)*np.sin(s)*np.cos(gamma)*(np.sin(0)-np.sin(0))
+            - np.cos(delta)*np.sin(s)*np.sin(gamma)*(np.cos(0)-np.cos(0)))
+        
+    ID = np.where(np.ravel(SunOrNoSun==False))
+    integral.flat[ID] = constant * (np.sin(delta)*np.sin(phi)*np.cos(s)*(sunset-sunrise) 
+            - np.sin(delta)*np.cos(phi)*np.sin(s)*np.cos(gamma)*(sunset-sunrise)
+            + np.cos(delta)*np.cos(phi)*np.cos(s)*(np.sin(sunset)-np.sin(sunrise))
+            + np.cos(delta)*np.sin(phi)*np.sin(s)*np.cos(gamma)*(np.sin(sunset)-np.sin(sunrise))
+            - np.cos(delta)*np.sin(s)*np.sin(gamma)*(np.cos(sunset)-np.cos(sunrise)))
+    return(integral)    
+
+#------------------------------------------------------------------------------
+def SunHours(delta,s,gamma,phi):
+    '''
+    Based on Richard G. Allen 2006 Appendix A
+    refines integration limits (hour angels) so that they are correctly applied
+    for all combinations of slope, aspect, and latitude
+    '''
+    a,b,c = Constants(delta,s,gamma,phi)
+    riseSlope, setSlope = BoundsSlope(a,b,c)
+    bound = BoundsHorizontal(delta,phi)
+    
+    Calculated = np.zeros(s.shape, dtype = bool)    
+    RiseFinal = np.zeros(s.shape)    
+    SetFinal = np.zeros(s.shape)
+
+    # First check sunrise is not nan
+    # This means that their is either no sunrise (whole day night) or no sunset (whole day light)
+    # For whole day light, use the horizontal sunrise and whole day night a zero..
+    Angle4 = AngleSlope(a,b,c,-bound)    
+    RiseFinal[np.logical_and(np.isnan(riseSlope),Angle4 >= 0)] = -bound[np.logical_and(np.isnan(riseSlope),Angle4 >= 0)]
+    Calculated[np.isnan(riseSlope)] = True 
+    
+    # Step 1 > 4    
+    Angle1 = AngleSlope(a,b,c,riseSlope)
+    Angle2 = AngleSlope(a,b,c,-bound)    
+
+    ID = np.ravel_multi_index(np.where(np.logical_and(np.logical_and(Angle2 < Angle1+0.001 ,Angle1 < 0.001),Calculated == False) == True),a.shape)
+    RiseFinal.flat[ID] = riseSlope.flat[ID]
+    Calculated.flat[ID] = True
+    
+    # step 5 > 7
+    Angle3 = AngleSlope(a,b,c,-np.pi - riseSlope)
+    
+    ID = np.ravel_multi_index(np.where(np.logical_and(np.logical_and(-bound<(-np.pi-riseSlope),Angle3 <= 0.001),Calculated == False) == True),a.shape) # Limits see appendix A.2.iv 
+    RiseFinal.flat[ID] = -np.pi -riseSlope.flat[ID] # Limits see appendix A.2.v
+    Calculated.flat[ID] = True
+    
+    # For all other values we use the horizontal sunset if it is positive, otherwise keep a zero   
+    RiseFinal[Calculated == False] = -bound[Calculated == False]      
+        
+    # Then check sunset is not nan or < 0 
+    Calculated = np.zeros(s.shape, dtype = bool)     
+
+    Angle4 = AngleSlope(a,b,c,bound)    
+    SetFinal[np.logical_and(np.isnan(setSlope),Angle4 >= 0)] = bound[np.logical_and(np.isnan(setSlope),Angle4 >= 0)]
+    Calculated[np.isnan(setSlope)] = True     
+
+    # Step 1 > 4    
+    Angle1 = AngleSlope(a,b,c,setSlope)
+    Angle2 = AngleSlope(a,b,c,bound)    
+    
+    ID = np.ravel_multi_index(np.where(np.logical_and(np.logical_and(Angle2 < Angle1+0.001,Angle1 < 0.001),Calculated == False) == True),a.shape)
+    SetFinal.flat[ID] = setSlope.flat[ID]
+    Calculated.flat[ID] = True
+    
+    # step 5 > 7
+    Angle3 = AngleSlope(a,b,c,np.pi - setSlope)
+    
+    ID = np.ravel_multi_index(np.where(np.logical_and(np.logical_and(bound>(np.pi-setSlope),Angle3 <= 0.001),Calculated == False) == True),a.shape) 
+    SetFinal.flat[ID] = np.pi - setSlope.flat[ID]
+    Calculated.flat[ID] = True
+    
+    # For all other values we use the horizontal sunset if it is positive, otherwise keep a zero   
+    SetFinal[Calculated == False] = bound[Calculated == False]   
+    
+    #    Angle4 = AngleSlope(a,b,c,bound)    
+    #    SetFinal[np.logical_and(Calculated == False,Angle4 >= 0)] = bound[np.logical_and(Calculated == False,Angle4 >= 0)]
+    
+    # If Sunrise is after Sunset there is no sunlight during the day
+    SetFinal[SetFinal <= RiseFinal] = 0
+    RiseFinal[SetFinal <= RiseFinal] = 0
+    return(RiseFinal,SetFinal)
+       
+#------------------------------------------------------------------------------    
+def TwoPeriods(delta,s,phi):
+    '''
+    Based on Richard G. Allen 2006
+    Create a boolean map with True values for places with two sunsets
+    '''
+    TwoPeriods = (np.sin(s) > np.ones(s.shape)*np.sin(phi)*np.sin(delta)+np.cos(phi)*np.cos(delta))
+    return(TwoPeriods)  
+
+#------------------------------------------------------------------------------
+def BoundsSlope(a,b,c):
+    '''
+    Based on Richard G. Allen 2006 equation 13
+    This function calculates candidate values for sunrise and sunset hour angles
+    '''
+    Div = (b**2+c**2)   
+    Div[Div <= 0] = 0.00001
+    sinB = (a*c + b*np.sqrt(b**2+c**2-a**2)) / Div
+    sinA = (a*c - b*np.sqrt(b**2+c**2-a**2)) / Div
+
+    sinB[sinB < -1] = -1; sinB[sinB > 1] = 1    # Limits see appendix A.2.i
+    sinA[sinA < -1] = -1; sinA[sinA > 1] = 1    # Limits see appendix A.2.i
+
+    sunrise = np.arcsin(sinA)
+    sunset = np.arcsin(sinB)
+    return(sunrise,sunset)
+    
+#------------------------------------------------------------------------------   
+def BoundsHorizontal(delta,phi):
+    ''''
+    Based on Richard G. Allen 2006
+    This function calculates sunrise hours based on earth inclination and latitude
+    If there is no sunset or sunrise hours the values are either set to 0 (polar night) or pi (polar day)    
+    '''
+    bound = np.arccos(-np.tan(delta)*np.tan(phi))
+    bound[abs(delta+phi) > np.pi/2] = np.pi
+    bound[abs(delta-phi) > np.pi/2] = 0
+    return(bound)
 
 #------------------------------------------------------------------------------
 def Constants(delta,s,gamma,phi):
@@ -746,7 +994,7 @@ def Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder_temp,ulx
         dst_FileName = os.path.join(output_folder_temp,
                                     'cropped_LS_b%1d.tif' % band)
           
-        ls_data=Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,gdalwarp)
+        ls_data=Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
         # stats = band_data.GetStatistics(0, 1)
 
         index = np.where(Bands[:-(len(Bands)-6)] == band)[0][0]
