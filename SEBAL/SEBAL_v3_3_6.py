@@ -11,7 +11,6 @@ pySEBAL_3.3.6
 import sys
 import os
 import re
-import subprocess
 import shutil
 import numpy as np
 import datetime
@@ -792,16 +791,9 @@ def SEBALcode(number,inputExcel):
         # If the directory does not exist, create it.
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
-            
-            
+             
         lsc, ulx, uly, lrx, lry, epsg_to = reproject_dataset2(src_FileName, proyDEM_fileName)											
 
-       
-        # Clip the landsat image to match the DEM map											
-        fullCmd = ' '.join(['gdalwarp -te %s %s %s %s' % (ulx_dem, lry_dem, lrx_dem, uly_dem), src_FileName, dst_FileName])
-        process = subprocess.Popen(fullCmd, shell = True)
-        process.wait()
-   
         #	Get the extend of the remaining landsat file	after clipping based on the DEM file	
         y_size_lsc = lsc.RasterYSize
         x_size_lsc = lsc.RasterXSize    
@@ -824,20 +816,20 @@ def SEBALcode(number,inputExcel):
         # Resample DEM related maps to resolution of clipped Landsat images - 30 m
  
         # 1) Cos_zn
-        cos_zn_resh = reshape(cos_zn_fileName, dst_FileName_cos, 30, var = 'cos_zn')
+        cos_zn_resh = Reshape_Reproject_Input_data(cos_zn_fileName, dst_FileName_cos, proyDEM_fileName)
        
         # 2) DEM
-        DEM_resh = reshape(proyDEM_fileName, dst_FileName_DEM, 30, var = 'DEM')
-
+        DEM_resh = Reshape_Reproject_Input_data(proyDEM_fileName, dst_FileName_DEM, proyDEM_fileName)
+       
         # 3) Reshaped Mountain radiation
-        Ra_mountain_24_resh = reshape(radiation_fileName, dst_FileName_Ra, 30, var = 'Ra_24')
+        Ra_mountain_24_resh = Reshape_Reproject_Input_data(radiation_fileName, dst_FileName_Ra, proyDEM_fileName)
        
         # 4) Reshaped instantaneous radiation
-        Ra_inst = reshape(radiation_inst_fileName, dst_FileName_Ra_inst, 30, var= 'Ra_inst' )
+        Ra_inst = Reshape_Reproject_Input_data(radiation_inst_fileName, dst_FileName_Ra_inst, proyDEM_fileName)
        
         # 5) Reshaped psi
-        phi = reshape(phi_fileName, dst_FileName_phi, 30, var = 'phi')
- 
+        phi = Reshape_Reproject_Input_data(phi_fileName, dst_FileName_phi, proyDEM_fileName)
+
         # 6) Reshape meteo data if needed (when path instead of number is input)
       
         # 6a) Instantaneous Temperature
@@ -1018,20 +1010,13 @@ def SEBALcode(number,inputExcel):
              src_FileName_5 = os.path.join(input_folder, '%s_B7.TIF' % (Name_Landsat_Image)) #open smallest band
              src_FileName_6 = os.path.join(input_folder, '%s_B2.TIF' % (Name_Landsat_Image)) #open smallest band
              src_FileName_7 = os.path.join(input_folder, '%s_B5.TIF' % (Name_Landsat_Image)) #open smallest band
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_Clip_b6_%s_%s_%s.tif' %(sensor1, res1, year, DOY))                              
-             ls_data=Open_landsat(src_FileName,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_Clip_b1_%s_%s_%s.tif' %(sensor1, res1, year, DOY))                              
-             ls_data_2=Open_landsat(src_FileName_2,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_Clip_b3_%s_%s_%s.tif' %(sensor1, res1, year, DOY))                              
-             ls_data_3=Open_landsat(src_FileName_3,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_Clip_b4_%s_%s_%s.tif' %(sensor1, res1, year, DOY))                              
-             ls_data_4=Open_landsat(src_FileName_4,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_Clip_b7_%s_%s_%s.tif' %(sensor1, res1, year, DOY))                              
-             ls_data_5=Open_landsat(src_FileName_5,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_Clip_b2_%s_%s_%s.tif' %(sensor1, res1, year, DOY))                              
-             ls_data_6=Open_landsat(src_FileName_6,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_Clip_b5_%s_%s_%s.tif' %(sensor1,res1, year, DOY))                              
-             ls_data_7=Open_landsat(src_FileName_7,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
+             ls_data=Open_landsat(src_FileName,proyDEM_fileName)
+             ls_data_2=Open_landsat(src_FileName_2,proyDEM_fileName)
+             ls_data_3=Open_landsat(src_FileName_3,proyDEM_fileName)
+             ls_data_4=Open_landsat(src_FileName_4,proyDEM_fileName)
+             ls_data_5=Open_landsat(src_FileName_5,proyDEM_fileName)
+             ls_data_6=Open_landsat(src_FileName_6,proyDEM_fileName)
+             ls_data_7=Open_landsat(src_FileName_7,proyDEM_fileName)
                         
              # create and save the landsat mask for all images based on band 11 (smallest map)
              ClipLandsat=np.ones((shape_lsc[1], shape_lsc[0]))
@@ -1040,12 +1025,10 @@ def SEBALcode(number,inputExcel):
         # If landsat 8 then use landsat band 10 and 11
         elif Landsat_nr == 8:
              src_FileName_11 = os.path.join(input_folder, '%s_B11.TIF' % (Name_Landsat_Image)) #open smallest band
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_cropped_Clip_b11_%s.tif' % (sensor1, res1))                              
-             ls_data_11=Open_landsat(src_FileName_11,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
+             ls_data_11=Open_landsat(src_FileName_11,proyDEM_fileName)
 
              src_FileName_10 = os.path.join(input_folder, '%s_B10.TIF' % (Name_Landsat_Image)) #open smallest band
-             dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_cropped_Clip_b10_%s.tif' % (sensor1, res1))                              
-             ls_data_10=Open_landsat(src_FileName_10,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
+             ls_data_10=Open_landsat(src_FileName_10, proyDEM_fileName)
  
              # create and save the landsat mask for all images based on band 10 and 11
              ClipLandsat=np.ones((shape_lsc[1], shape_lsc[0]))
@@ -1054,25 +1037,22 @@ def SEBALcode(number,inputExcel):
         else:
             print 'Landsat image not supported, use Landsat 7 or 8'
 
-        # Define the output name of the landsat mask       
-        dst_FileNameClip = os.path.join(output_folder, 'Output_temporary','%s_cropped_Clip_b11_%s.tif' % (sensor1, res1))  
-
         # Open data of the landsat mask                            
-        ls_data=Open_landsat(src_FileName,dst_FileNameClip,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
+        ls_data=Open_landsat(src_FileName, proyDEM_fileName)
        
         # Save Landsat mask as a tiff file							
         save_GeoTiff_proy(lsc, ClipLandsat, dst_LandsatMask, shape_lsc, nband=1)
        
         # 2.)          
         # Create 3D array to store the Termal band(s) (nr10(&11) for LS8 and n6 for LS7) 
-        therm_data = Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,ClipLandsat)          
+        therm_data = Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,shape_lsc,ClipLandsat, proyDEM_fileName)          
        
         # 3.)
         # Create 3D array to store Spectral radiance and Reflectivity for each band
-        Reflect,Spec_Rad = Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,ClipLandsat,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr)
+        Reflect,Spec_Rad = Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder,shape_lsc,ClipLandsat,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr, proyDEM_fileName)
        
         # save spectral data 
-        for i in range(0,7):							
+        for i in range(0,6):							
             spec_ref_fileName = os.path.join(output_folder, 'Output_radiation_balance','%s_spectral_reflectance_B%s_%s_%s_%s.tif' %(Bands[i], sensor1, res3, year, DOY))
             save_GeoTiff_proy(lsc, Reflect[:, :, i], spec_ref_fileName, shape_lsc, nband=1)
           								
@@ -3488,7 +3468,7 @@ def CalculateSnowWaterMask(NDVI,shape_lsc,water_mask_temp,Surface_temp):
        
     
 #------------------------------------------------------------------------------    
-def Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,ClipLandsat,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr):
+def Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder,shape_lsc,ClipLandsat,Lmax,Lmin,ESUN_L5,ESUN_L7,ESUN_L8,cos_zn_resh,dr,Landsat_nr, proyDEM_fileName):
     """
     This function calculates and returns the reflectance and spectral radiation from the landsat image.
     """ 
@@ -3499,11 +3479,8 @@ def Landsat_Reflect(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,
         # Open original Landsat image for the band number
         src_FileName = os.path.join(input_folder, '%s_B%1d.TIF'
                                     % (Name_Landsat_Image, band))
-        # Define the filename to store the cropped Landsat image
-        dst_FileName = os.path.join(output_folder, 'Output_temporary',
-                                    'cropped_LS_b%1d.tif' % band)
-          
-        ls_data=Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc)
+
+        ls_data=Open_landsat(src_FileName, proyDEM_fileName)
         ls_data = ls_data*ClipLandsat
         # stats = band_data.GetStatistics(0, 1)
 
@@ -3554,7 +3531,7 @@ def Landsat_rho_lambda(L_lambda,ESUN,index,cos_zn_resh,dr):
     
     
 #------------------------------------------------------------------------------
-def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc,ClipLandsat):          
+def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder, shape_lsc,ClipLandsat, proyDEM_fileName):          
     """
     This function calculates and returns the thermal data from the landsat image.
     """                             
@@ -3567,11 +3544,7 @@ def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_d
              src_FileName = os.path.join(input_folder, '%s_B%1d_VCID_2.TIF'
                                     % (Name_Landsat_Image, band))		    																																
 																																				
-        # Define the filename to store the cropped Landsat image
-        dst_FileName = os.path.join(output_folder, 'Output_temporary',
-                                    'cropped_LS_b%1d.tif' % band)
-
-        ls_data=Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc) 																																	
+        ls_data=Open_landsat(src_FileName, proyDEM_fileName) 																																	
         ls_data = ls_data*ClipLandsat
         index = np.where(Bands[:] == band)[0][0] - 6
         therm_data[:, :, index] = ls_data
@@ -3580,21 +3553,17 @@ def Landsat_therm_data(Bands,input_folder,Name_Landsat_Image,output_folder,ulx_d
    
    
 #------------------------------------------------------------------------------   
-def Open_landsat(src_FileName,dst_FileName,ulx_dem,lry_dem,lrx_dem,uly_dem,shape_lsc):
+def Open_landsat(src_FileName, proyDEM_fileName):
     """
     This function opens a landsat image and returns the data array of a specific landsat band.
     """                           
     # crop band to the DEM extent
-    fullCmd = ' '.join(['gdalwarp -te %s %s %s %s' % (ulx_dem, lry_dem,lrx_dem, uly_dem), src_FileName, dst_FileName])
-    process = subprocess.Popen(fullCmd, shell = True)
-    process.wait()
+    ls, ulx, uly, lrx, lry, epsg_to = reproject_dataset2(src_FileName, proyDEM_fileName)											
     
     # Open the cropped Landsat image for the band number
-    ls = gdal.Open(dst_FileName)
-    ls_data = ls.GetRasterBand(1).ReadAsArray(0, 0, shape_lsc[0], shape_lsc[1])
+    ls_data = ls.GetRasterBand(1).ReadAsArray()
     return(ls_data) 
   
-
 #------------------------------------------------------------------------------
 def Get_Extend_Landsat(src_FileName):
     """
@@ -3999,12 +3968,15 @@ def reproject_dataset(dataset, pixel_spacing, UTM_Zone):
 
     inProj = Proj(init='epsg:%d' %epsg_from)
     outProj = Proj(init='epsg:%d' %epsg_to)
+
+    nrow_skip = round((0.07*y_size)/2)
+    ncol_skip = round((0.04*x_size)/2)
 				
     # Up to here, all  the projection have been defined, as well as a
     # transformation from the from to the to
-    ulx, uly = transform(inProj,outProj,geo_t[0], geo_t[3])
-    lrx, lry = transform(inProj,outProj,geo_t[0] + geo_t[1] * x_size,
-                                        geo_t[3] + geo_t[5] * y_size)
+    ulx, uly = transform(inProj,outProj,geo_t[0], geo_t[3] + nrow_skip * geo_t[5])
+    lrx, lry = transform(inProj,outProj,geo_t[0] + geo_t[1] * (x_size-ncol_skip),
+                                        geo_t[3] + geo_t[5] * (y_size-nrow_skip))
 
     # See how using 27700 and WGS84 introduces a z-value!
     # Now, we create an in-memory raster
@@ -4237,32 +4209,6 @@ def info_band_metadata(filename, Bands):
     return Lmin, Lmax, k1_const, k2_const
 
 #------------------------------------------------------------------------------
-def reshape(src_FileName, dst_FileName, LS_resol, var):
-    """
-    This function resamples the DEM related maps (lat, lon, etc.)
-    to the resolution of the Landsat images (generally 30 m)
-    radiance) from the metadata file.
-
-    """
-    dir_name = os.path.dirname(dst_FileName)
-    
-    # If the directory does not exist, make it.
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
-    fullCmd = ' '.join(['gdalwarp -tr %s %s -r bilinear' % (LS_resol, LS_resol),src_FileName, dst_FileName])  # -r {nearest}
-    process = subprocess.Popen(fullCmd, shell = True)
-    process.wait()
-    re_var = gdal.Open(dst_FileName)  # Open cropped Image
-    
-    print '---'
-    print 'Reshaping %s - ' % var
-    x_size = re_var.RasterXSize     # Raster xsize - Number of Columns
-    y_size = re_var.RasterYSize     # Raster ysize - Number of Rows
-    band_data_var = re_var.GetRasterBand(1)
-    var_resh = band_data_var.ReadAsArray(0, 0, x_size, y_size)
-    return var_resh
-
-#------------------------------------------------------------------------------
 def sensible_heat(rah, ustar, rn_inst, g_inst, ts_dem, ts_dem_hot, ts_dem_cold,
                   air_dens, Surf_temp, k_vk, Landsat_QC, hot_pixels,ClipLandsat, slope):
     """
@@ -4324,56 +4270,6 @@ def sensible_heat(rah, ustar, rn_inst, g_inst, ts_dem, ts_dem_hot, ts_dem_cold,
 
     return L_MO, psi_200_stable, psi_h, psi_m200, h, dT, slope_dt, offset_dt
 
-#------------------------------------------------------------------------------
-   
-def Open_VIIRS_data(Band_VIIRShdf_fileName, Band, output_folder, UTM_Zone, pixel_spacing, epsg_VIIRS, Dataset_Projection):
-   dst_FileName_Dir = os.path.join(output_folder, 'Output_temporary')
-   if not os.path.exists(dst_FileName_Dir):  
-       os.makedirs(dst_FileName_Dir)
-   
-   if Band is 'DN':
-      dst_FileName = os.path.join(dst_FileName_Dir,'resh_VIIRS_data.tif') 
-      input_VIIRS_map=Band_VIIRShdf_fileName + '"://All_Data/VIIRS-I5-SDR_All/BrightnessTemperature'
-   else:
-      dst_FileName = os.path.join(dst_FileName_Dir,'resh_VIIRS_QC_data.tif') 
-      input_VIIRS_map=Band_VIIRShdf_fileName + '"://All_Data/VIIRS-I5-SDR_All/QF1_VIIRSIBANDSDR'
-   
-   fullCmd = ''.join(['gdalwarp -s_srs EPSG:%s -t_srs EPSG:4326 -of GTiff HDF5:"' % (epsg_VIIRS), input_VIIRS_map,' ',dst_FileName])
-   process = subprocess.Popen(fullCmd, shell = True)
-   process.wait()
-   
-   g=gdal.Open(dst_FileName)
-   geo = g.GetGeoTransform()
-   
-   band = g.GetRasterBand(1)
-   data=band.ReadAsArray()
-   
-   
-   # Check latitude data
-   if geo[0]+band.XSize*geo[1]>180:
-   
-       # Replace the whole area 180 degrees to the west
-       lst = list(geo)
-       lst[0] = (geo[0]-180)
-       geo = tuple(lst)
-      
-       # create dataset for output
-       fmt = 'GTiff'
-       driver = gdal.GetDriverByName(fmt)
-    
-       dst_dataset = driver.Create(dst_FileName, band.XSize, band.YSize, 1,gdal.GDT_Float32)
-       dst_dataset.SetGeoTransform(geo)
-       dst_dataset.SetProjection("4326")
-       dst_dataset.GetRasterBand(1).WriteArray(data)
-       dst_dataset = None
-        
- 
-   VIIRS, ulx_dem, lry_dem, lrx_dem, uly_dem, epsg_to = reproject_dataset2(dst_FileName, Dataset_Projection)
-   data_VIIRS = VIIRS.GetRasterBand(1).ReadAsArray()
-   g=None
-    
-            
-   return(data_VIIRS)
 #------------------------------------------------------------------------------   
     
 def Reshape_Reproject_Input_data(input_File_Name, output_File_Name, Example_extend_fileName):
