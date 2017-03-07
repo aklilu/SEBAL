@@ -735,7 +735,7 @@ def SEBALcode(number,inputExcel):
         print '---------------------------------------------------------'
         print '-------------------- Module 1 ---------------------------'
         print '---------------------------------------------------------'
-      
+
         # Calculation of extraterrestrial solar radiation for slope and aspect   
         Ra_mountain_24, Ra_inst, cos_zn, dr, phi, delta = Calc_Ra_Mountain(lon, DOY, hour, minutes, lon_proy, lat_proy, slope, aspect)  
  
@@ -1811,10 +1811,25 @@ def SEBALcode(number,inputExcel):
         print '-------------------- Module 1 ---------------------------'
         print '---------------------------------------------------------'
       
+        # Change Time in local time (VIIRS data name is in GMT)      
+
+        # Rounded difference of the local time from Greenwich (GMT) (hours):
+        delta_GTM = round(np.sign(lon[nrow/2, ncol/2]) * lon[nrow/2, ncol/2] * 24 / 360)
+        if np.isnan(delta_GTM) == True:
+             delta_GTM = round(np.nanmean(lon) * np.nanmean(lon)  * 24 / 360)
+
+        hour += delta_GTM
+        if hour < 0.0:
+            day -= 1
+            hour += 24
+        if hour >= 24:
+            day += 1
+            hour -= 24           
+  
         # Calculation of extraterrestrial solar radiation for slope and aspect   
         Ra_mountain_24,Ra_inst,cos_zn,dr,phi,delta=Calc_Ra_Mountain(lon,DOY,hour,minutes,lon_proy,lat_proy,slope,aspect)  
-           
         Sun_elevation = 90 - (np.nanmean(cos_zn) * 180/np.pi)
+        
         # Save files created in module 1
         save_GeoTiff_proy(dest, cos_zn, cos_zn_fileName, shape, nband=1)
         save_GeoTiff_proy(dest, Ra_mountain_24, radiation_fileName, shape, nband=1)
@@ -3856,12 +3871,12 @@ def BoundsHorizontal(delta,phi):
     return(bound)
 
 #------------------------------------------------------------------------------
-def AngleSlope(a,b,c,time):
+def AngleSlope(a,b,c,w):
     '''
     Based on Richard G. Allen 2006
     Calculate the cos zenith angle by using the hour angle and constants
     '''
-    angle = -a + b*np.cos(time) + c*np.sin(time)
+    angle = -a + b*np.cos(w) + c*np.sin(w)
     return(angle)    
 
 #------------------------------------------------------------------------------
