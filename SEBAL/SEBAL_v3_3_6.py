@@ -6,7 +6,7 @@ pySEBAL_3.3.6
 
 @author: Tim Hessels, Jonna van Opstal, Patricia Trambauer, Wim Bastiaanssen, Mohamed Faouzi Smiej, Yasir Mohamed, and Ahmed Er-Raji
          UNESCO-IHE
-         November 2016
+         March 2017
 """
 import sys
 import os
@@ -1992,33 +1992,26 @@ def SEBALcode(number,inputExcel):
             # Translate the PROBA-V names to the Landsat band names                
             Band_number={'SM':7,'B1':8,'B2':10,'B3':9,'B4':11}
 
-            # Split the PROBA-V name (Do no change the names but keep the name as downloaded data from VITO)           
-            Name_PROBAV=Name_PROBAV_Image.split('_')
-
-            # Get the tile numbers of the PROBA-V           
-            X_PROBAV=int(Name_PROBAV[3][1:3])
-            Y_PROBAV=int(Name_PROBAV[3][4:6])
-
-            # Define the upperleft coordinate based on the tile number           
-            X_ul=-180+(10*X_PROBAV)
-            Y_ul=75-(10*Y_PROBAV)
- 
             # Open the .hdf file              
             Band_PROBAVhdf_fileName = os.path.join(input_folder, '%s.HDF5' % (Name_PROBAV_Image))   
                     
-            # Open the dataset
+            # Open the dataset        
             g=gdal.Open(Band_PROBAVhdf_fileName)
         
             # open the subdataset to get the projection
             sds_b3 = gdal.Open(g.GetSubDatasets()[Band_number[bandnmr]][0])
             Data = sds_b3.GetRasterBand(1).ReadAsArray()
  
-            # Define the x and y spacing           
-            X_spacing=0.000992063492063 #float(10.0/int(Data.shape[0]))
-            Y_spacing=0.000992063492063 #float(10.0/int(Data.shape[1]))
-            
+            # Define the x and y spacing
+            Meta_data = g.GetMetadata()
+            Lat_Bottom = float(Meta_data['LEVEL3_GEOMETRY_BOTTOM_LEFT_LATITUDE'])
+            Lat_Top = float(Meta_data['LEVEL3_GEOMETRY_TOP_RIGHT_LATITUDE'])
+            Lon_Left = float(Meta_data['LEVEL3_GEOMETRY_BOTTOM_LEFT_LONGITUDE'])
+            Lon_Right = float(Meta_data['LEVEL3_GEOMETRY_TOP_RIGHT_LONGITUDE'])           
+            Pixel_size = float((Meta_data['LEVEL3_GEOMETRY_VNIR_VAA_MAPPING']).split(' ')[-3])
+                
             # Define the georeference of the PROBA-V data
-            geo_PROBAV=[X_ul-0.5*X_spacing, X_spacing, 0, Y_ul+0.5*Y_spacing, 0, -Y_spacing] #0.000992063492063
+            geo_PROBAV=[Lon_Left-0.5*Pixel_size, Pixel_size, 0, Lat_Top+0.5*Pixel_size, 0, -Pixel_size] #0.000992063492063
 		 									
             # Define the name of the output file											
             PROBAV_data_name=os.path.join(input_folder, '%s_%s.tif' % (Name_PROBAV_Image,bandnmr)) 									
