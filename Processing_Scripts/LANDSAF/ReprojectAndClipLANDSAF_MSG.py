@@ -29,31 +29,41 @@ if not os.path.exists(temp_folder):
     
 os.chdir(input_folder)
 for file_name in [e for e in glob.glob('HDF5_*') if not e.endswith('.tif')]:
+
     print 'Processing: ', file_name
     extension = os.path.splitext(file_name)[1]
     file_name_only = os.path.splitext(file_name)[0]
     file_name_tiff =file_name_only + '.tif'
+    out_name = os.path.join(input_folder, file_name_tiff)
 
-    # unzip bunzipfile if needed 
-    if str(extension) == '.bz2':
-        fullCmd = '7z e %s -o%s' %(file_name,temp_folder)
+    if not os.path.exists(out_name):
+
+
+        # unzip bunzipfile if needed 
+        if str(extension) == '.bz2':
+            fullCmd = '7z e %s -o%s' %(file_name,temp_folder)
+            process = subprocess.Popen(fullCmd)
+            process.wait() 
+            input_folder_landsaf = temp_folder
+        else:
+            input_folder_landsaf = input_folder        
+      
+        # Get environmental variable
+        SEBAL_env_paths = os.environ["SEBAL"].split(';')
+        GDAL_env_path = SEBAL_env_paths[0]
+        GDAL_TRANSLATE = os.path.join(GDAL_env_path, 'gdal_translate.exe')
+        GDALWARP = os.path.join(GDAL_env_path, 'gdalwarp.exe')
+    
+        # Set projection of GOES/LANDSAF data
+        output_GOES_projected = os.path.join(temp_folder,'GOES_projected_LANDSAF.tif')    
+        fullCmd = '"%s" -a_srs  "+proj=geos +a=6378169 +b=6356583.8 +lon_0=0 +h=35785831" -a_ullr -5570248.832537 5570248.832537 5570248.832537 -5570248.832537 HDF5:"%s"://DSSF "%s"' %(GDAL_TRANSLATE, os.path.join(input_folder_landsaf, file_name_only), output_GOES_projected)
         process = subprocess.Popen(fullCmd)
         process.wait() 
-        input_folder_landsaf = temp_folder
-    else:
-        input_folder_landsaf = input_folder        
-        
-    # Set projection of GOES/LANDSAF data
-    output_GOES_projected = os.path.join(temp_folder,'GOES_projected_LANDSAF.tif')    
-    fullCmd = 'gdal_translate -a_srs  "+proj=geos +a=6378169 +b=6356583.8 +lon_0=0 +h=35785831" -a_ullr -5570248.832537 5570248.832537 5570248.832537 -5570248.832537 HDF5:"%s"://DSSF %s' %(os.path.join(input_folder_landsaf, file_name_only), output_GOES_projected)
-    process = subprocess.Popen(fullCmd)
-    process.wait() 
-
-    # Reproject GOES/LANDSAF data and clip data
-    out_name = os.path.join(input_folder, file_name_tiff)
-    fullCmd = 'gdalwarp -overwrite -s_srs "+proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +b=6356583.8 +units=m +no_defs" -t_srs EPSG:4326 -te %d %d %d %d -of GTiff %s %s' %(lonlim[0], latlim[0], lonlim[1], latlim[1], output_GOES_projected, out_name)
-    process = subprocess.Popen(fullCmd)
-    process.wait() 
+  
+        # Reproject GOES/LANDSAF data and clip data
+        fullCmd = '"%s" -overwrite -s_srs "+proj=geos +lon_0=0 +h=35785831 +x_0=0 +y_0=0 +a=6378169 +b=6356583.8 +units=m +no_defs" -t_srs EPSG:4326 -te %d %d %d %d -of GTiff "%s" "%s"' %(GDALWARP, lonlim[0], latlim[0], lonlim[1], latlim[1], output_GOES_projected, out_name)
+        process = subprocess.Popen(fullCmd)
+        process.wait() 
 
 # Save data as Tiff
 if os.path.exists(temp_folder):

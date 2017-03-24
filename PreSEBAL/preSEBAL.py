@@ -27,7 +27,7 @@ def main():
         inputExcel=r'J:\SEBAL_Tadla\Excel\InputEXCEL_v3_3_6.xlsx'               # The excel with all the SEBAL input data
         VegetationExcel = r'J:\SEBAL_Tadla\Excel\Vegetation height model.xlsx'  # This excel defines the p and c factor and vegetation height.
         output_folder = r'J:\SEBAL_Tadla\Preprocessing_Output'         # Output folder
-        LU_data_FileName=r'J:\SEBAL_Tadla\LandCover\LU_map.tif'        # Path to Land Use map
+        LU_data_FileName = r'J:\SEBAL_Tadla\LandCover\LU_map.tif'        # Path to Land Use map
     
         # optional paramater 
         DSSF_Folder=r'J:\SEBAL_Tadla\LANDSAF'
